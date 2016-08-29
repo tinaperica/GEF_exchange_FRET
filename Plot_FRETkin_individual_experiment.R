@@ -6,16 +6,16 @@ min.na.rm <- function (x) {
   min(x, na.rm = T)
 }
 setwd("~/Documents/GSP1_experimental_data/GEF_exchange_exp/")
-tecan<-read.delim("data/20160824_FRET_kinetics3_parsed.txt", stringsAsFactors = F, head = F)
+name_prefix <- "20160827"
+tecan<-read.delim("data/20160827_FRET_kinetics_parsed.txt", stringsAsFactors = F, head = F)
 names(tecan) <- c("exp_date", "time", "row", "col", "protein", "condition", "Gsp1_concentration", "GEF_concentration", "fluorescence")
 head(tecan)
 tecan <- cbind(tecan,paste(tecan[[8]], "nM", sep = " "))
 names(tecan)[length(names(tecan))] <- "GEF_conc_condition"
 tecan <- tecan[complete.cases(tecan),]
 tecan <- subset(tecan, GEF_concentration > 0)
-name_prefix <- Sys.Date()
 rawoutfilename = paste (name_prefix, "_FRET_kinetics_raw.pdf", collapse = "")
-normoutfilename = paste(name_prefix, "_FRET_kinetics_norm.pdf", collapse = "")
+#normoutfilename = paste(name_prefix, "_FRET_kinetics_norm.pdf", collapse = "")
 scaledoutfilename = paste(name_prefix, "_FRET_kinetics_scaled.pdf", collapse = "")
 proteins<-unique(tecan$protein)
 
@@ -46,18 +46,18 @@ for (i in 1:length(proteins)) {
 pdf(file = rawoutfilename)
 bquiet<-lapply(plots, print)
 dev.off()
-plots<-list()
-for (i in 1:length(proteins)) {
-  prot <- proteins[i]
-  temp<-subset(tecan.normalized, protein == prot)
-  temp <- temp[order(temp$time),]
-  plots[[i]]<-ggplot(data=temp, aes(x = time, y = normalized, group = interaction(condition, GEF_conc_condition), colour = condition, shape = GEF_conc_condition)) + geom_point()
-  #plots[[i]]<-plots[[i]] + stat_smooth(span = 0.5)
-  plots[[i]]<-plots[[i]] + ggtitle(prot)
-}
-pdf(file = normoutfilename)
-bquiet<-lapply(plots, print)
-dev.off()
+# plots<-list()
+# for (i in 1:length(proteins)) {
+#   prot <- proteins[i]
+#   temp<-subset(tecan.normalized, protein == prot)
+#   temp <- temp[order(temp$time),]
+#   plots[[i]]<-ggplot(data=temp, aes(x = time, y = normalized, group = interaction(condition, GEF_conc_condition), colour = condition, shape = GEF_conc_condition)) + geom_point()
+#   #plots[[i]]<-plots[[i]] + stat_smooth(span = 0.5)
+#   plots[[i]]<-plots[[i]] + ggtitle(prot)
+# }
+# pdf(file = normoutfilename)
+# bquiet<-lapply(plots, print)
+# dev.off()
 plots<-list()
 for (i in 1:length(proteins)) {
   prot <- proteins[i]
