@@ -6,8 +6,8 @@ min.na.rm <- function (x) {
   min(x, na.rm = T)
 }
 setwd("~/Documents/GSP1_experimental_data/GEF_exchange_exp/")
-name_prefix <- "20160827"
-tecan<-read.delim("data/20160827_FRET_kinetics_parsed.txt", stringsAsFactors = F, head = F)
+name_prefix <- "20160906"
+tecan<-read.delim("data/20160906_FRET_kinetics_parsed.txt", stringsAsFactors = F, head = F)
 names(tecan) <- c("exp_date", "time", "row", "col", "protein", "condition", "Gsp1_concentration", "GEF_concentration", "fluorescence")
 head(tecan)
 tecan <- cbind(tecan,paste(tecan[[8]], "nM", sep = " "))
@@ -70,3 +70,4 @@ for (i in 1:length(proteins)) {
 pdf(file = scaledoutfilename)
 bquiet<-lapply(plots, print)
 dev.off()
+

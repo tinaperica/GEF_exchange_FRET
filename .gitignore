@@ -1,0 +1,15 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# raw kinetics data
+/GTPase_assay/data/
+
+# experiment settings
+/GTPase_assay/GAP_assay_experiments/
+
+# temp plots
+/GTPase_assay/*pdf
+
+

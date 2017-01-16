@@ -1,0 +1,22 @@
+Measurement parameters
+~~~
+SAFIRE II
+Instrument serial number: 608000004
+Measurement mode: Fluorescence Top
+Excitation wavelength: 425 nm
+Emission wavelength: 457 nm
+Excitation bandwidth: 10.0 nm
+Emission bandwidth: 10.0 nm
+Gain (Optimal): 133
+Number of reads: 1
+FlashMode: High sensitivity
+Integration time: 40 µs
+Lag time: 0 µs
+Plate definition file: COS96fb.pdf
+Part of the plate: H1 - H12
+Z-Position (Manual): 13000 µm
+Number of kinetic cycles: 50
+Kinetic interval: 30 s
+Valid temperature range: 29 - 31 °C
+Shake duration (Orbital Medium): 1 s
+Unit: RFU
