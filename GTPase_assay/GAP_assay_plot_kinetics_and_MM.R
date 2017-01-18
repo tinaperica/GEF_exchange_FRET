@@ -112,3 +112,4 @@ fitting_parameters <- cbind(fitting_parameters, data.frame("converted_rate" = fi
 fitting_parameters <- cbind(fitting_parameters, data.frame("v0" = fitting_parameters$converted_rate / (fitting_parameters$GAP_conc/1000)))
 plot <- ggplot(data = fitting_parameters, aes(x = conc, y = v0, color = prot)) + geom_point()
 print(plot)
+initial_vs_conc <- fitting_parameters[, c("converted_rate", "v0")]
