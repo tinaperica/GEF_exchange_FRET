@@ -1,0 +1,4 @@
+well	protein	protein conc	GAP conc	GEF conc	MOG1 conc
+A8	PE29:GDP	1	0.015	0.02	0
+A9	PE29:GDP	3	0.015	0.02	0
+A10	PE1:GDP	3	0.015	0.01	0

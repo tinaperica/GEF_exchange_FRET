@@ -1,0 +1,12 @@
+C1	Pi_sensor	12.5 uM	12.5	NA
+C2	Pi_sensor	6.25 uM	6.25	NA
+C3	Pi_sensor	5 uM	5	NA
+C4	Pi_sensor	4 uM	4	NA
+C5	Pi_sensor	3 uM	3	NA
+C6	Pi_sensor	2.5 uM	2.5	NA
+C7	Pi_sensor	2 uM	2	NA
+C8	Pi_sensor	1.5 uM	1.5	NA
+C9	Pi_sensor	1 uM	1	NA
+C10	Pi_sensor	0.5 uM	0.5	NA
+C11	Pi_sensor	0.25 uM	0.25	NA
+C12	Pi_sensor	0 uM	0	NA
