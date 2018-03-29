@@ -1,0 +1,184 @@
+---
+title: "R Notebook - Fitting GEF nucleaotide exchange Trp FRET assay with photobleaching"
+output: html_notebook
+---
+
+```{r, message=FALSE, warning=FALSE}
+# import libraries
+library(tidyverse)
+library(minpack.lm)
+```
+
+```{r, message=FALSE}
+# read in data
+inputfilename <- "biotek_test_exp/data/good_data_parsed.txt"
+biotek.data <- read_delim(inputfilename, delim = "\t", col_names = T)
+```
+
+```{r}
+run_nls <- function(data, background_type, deadtime) {
+  
+  # print(unique(data$condition))
+  #### add the (estimated) dead time
+  deadtime_timepoints <- seq(-1*(deadtime), -5, 5)
+  data <- rbind(data, data.frame(Time = extrapolated_time, fluorescence = NA, GEF_conc = data$GEF_conc[1]))
+  if (background_type == 'linear') {
+    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0, k_background = 0)
+    out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c + k_background * Time,
+               data = data, start = start, control = nls.lm.control(maxiter = 200))
+    f0 <- coef(out)[1]
+    k <- coef(out)[2]
+    c <- coef(out)[3]
+    k_background <- coef(out)[4]
+    
+    #data$predicted <- (f0 - c) * exp(-k * data$Time) + c + k_background * data$Time
+    data$predicted <- (f0 - c) * exp(-k * extrapolated_time) + c + k_background * extrapolated_time
+    #data$signal <- (f0 - c) * exp(-k * data$Time) + c
+    data$signal <- (f0 - c) * exp(-k * extrapolated_time) + c
+    #data$background <- c + k_background * data$Time
+    data$background <- c + k_background * extrapolated_time
+    #data$min.fluorescence = data$signal[length(data$signal)]
+    data$min.fluorescence <- min(data$signal, na.rm = T)
+    data$max.fluorescence <- max(data$signal, na.rm = T)
+    # data$curvature <- ((k^2)*(f0-c)*exp(-k*data$Time)) / (1 + (-k*(f0-c)*exp(-k*data$Time)+k_decay)^2)^1.5
+    data$k_background <- k_background
+  }
+  
+  if  (background_type == 'exponential') {
+    #print(unique(data$condition))
+    #print(max(data$observed))
+    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 1, k_background = 0.0001)
+    out <- nlsLM(observed ~ (f0 - c) * (exp(-k * Time) + exp(-k_background * Time)) + c,
+               data = data, start = start, control = nls.lm.control(maxiter = 200))
+    f0 <- coef(out)[1]
+    k <- coef(out)[2]
+    c <- coef(out)[3]
+    k_background <- coef(out)[4]
+    
+    #data$predicted <- (f0 - c) * (exp(-k * data$Time) + exp(-k_background * data$Time)) + c
+    data$predicted <- (f0 -c) * (exp(-k * extrapolated_time) + exp(-k_background * extrapolated_time)) + c
+    #data$signal <- (f0 - c) * (exp(-k * data$Time)) + c
+    data$signal <- (f0 - c) * (exp(-k * extrapolated_time)) + c
+    #data$background <- exp(-k_background * data$Time) + c
+    data$background <- exp(-k_background * extrapolated_time) + c
+    #data$min.fluorescence = data$signal[length(data$signal)]
+    data$min.fluorescence <- min(data$signal, na.rm = T)
+    #data$max.fluorescence = quantile(data$signal, prob = 0.99, na.rm = T)
+    data.max.fluorescence <- data$signal[ data$Time == min(data$Time) ]
+    # data$curvature <- ((f0-c)*((k^2)*exp(-k*data$Time) + (k_decay^2)*exp(-k_decay*data$Time))) / (1 + ((f0-c)*(-k*exp(-k*data$Time)-k_decay*exp(-k_decay*data$Time)))^2)^1.5
+    data$k_background <- k_background
+  }
+  
+  if  (background_type == 'none') {
+    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0)
+    out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c,
+               data = data, start = start, control = nls.lm.control(maxiter = 200))
+    f0 <- coef(out)[1]
+    k <- coef(out)[2]
+    c <- coef(out)[3]
+
+    data$predicted <- (f0 - c)* exp(-k * data$Time) + c
+    #data$min.fluorescence = data$predicted[data$cutoff_time[1]/5]
+    cuttoff_time_range <- c(data$cutoff_time - 20, data$cutoff_time + 20)
+    data$min.fluorescence <- min(data$predicted[findInterval(data$Time, cutoff_time_range) == 1, ])
+    # data$curvature <- ((k^2)*(f0-c)*exp(-k*data$Time)) / (1 + (k^2)*((f0-c)^2)*exp(-2*k*data$Time))^1.5
+
+  }
+  # inflection_pt <- which.max(data$curvature)
+  # if ((inflection_pt <= 30) | (as.integer(1*inflection_pt) > length(data$curvature))) {data$min.fluorescence = data$predicted[length(data$curvature)]}
+  # else {data$min.fluorescence = data$predicted[as.integer(1*inflection_pt)]}
+
+  
+  data$f0 <- f0
+  data$k <- k
+  data$c <- c
+  data$v0 = (f0 * k * exp(k * 0)) / (data$GEF_conc[1]*0.001)
+  
+  return(data)
+}
+```
+
+```{r}
+plot_data <- function(data, decay_type, units) {
+  
+  # sink('/dev/null')
+  # plot data with fitted curves
+  plots <- list()
+  conditions = unique(data$condition)
+  for (i in seq_along(1:length(conditions))) {
+    data_to_plot <- data %>% filter(condition == conditions[i])
+    plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) + geom_point(color = "black") +
+      geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+      ggtitle(conditions[i])
+  }
+  pdf(paste(Sys.Date(), decay_type, units, 'data.pdf', sep= '_'), width = 10)
+  print(plots)
+  dev.off()
+
+  # plot michaelis-menten points for exp and lin decay
+  plots <- list()
+  samples = unique(data$sample)
+  for (i in seq_along(1:length(samples))) {
+    data_to_plot <- data %>% filter(sample == samples[i])
+    plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = conc, y = v0, color=as.character(date))) + geom_point()
+  }
+  pdf(paste(Sys.Date(), decay_type, units, 'MM.pdf', sep= '_'), width = 10)
+  print(plots)
+  dev.off()
+
+  # plot parameters for each fit
+  pdf(paste(Sys.Date(), decay_type, units, 'params.pdf', sep= '_'))
+  hist(unique(data$f0), breaks=100)
+  hist(unique(data$k), breaks=100)
+  hist(unique(data$c), breaks=100)
+  hist(unique(data$v0), breaks=100)
+  if (decay_type != 'none') {
+    hist(unique(data$k_decay), breaks=100)
+    print(ggplot(data, aes(x = conc, y = k_decay, color=sample)) + geom_point())
+  }
+  dev.off()
+
+  return(data)
+}
+```
+
+```{r}
+# Run data assuming photobleaching decay is exponential, first in fluorescence units, then in concentration units
+data.exp <- biotek.data
+data.exp <- data.exp %>%
+  group_by(condition) %>%
+  mutate(observed = fluorescence) %>%
+  do(run_nls(., decay_type='exponential')) %>%
+  # plot_data(decay_type='exponential', units='fluor') %>%
+  mutate(observed = conc - conc*(max.fluorescence - fluorescence)/(max.fluorescence - min.fluorescence)) %>%
+  do(run_nls(., decay_type='exponential')) %>%
+  plot_data(decay_type='exponential', units='conc')
+```
+
+```{r}
+# Run data assuming photobleaching decay is linear, first in fluorescence units, then in concentration units
+data.lin <- biotek.data
+data.lin <- data.lin %>%
+  group_by(condition) %>%
+  mutate(observed = fluorescence) %>%
+  do(run_nls(., decay_type='linear')) %>%
+  plot_data(decay_type='linear', units='fluor') %>%
+  mutate(observed = conc - conc*((max(fluorescence, na.rm=T) - fluorescence)/(max(fluorescence, na.rm=T) - min.fluorescence))) %>%
+  do(run_nls(., decay_type='linear')) %>%
+  plot_data(decay_type='linear', units='conc')
+```
+
+```{r}
+# Run data assuming photobleaching decay is linear, first in fluorescence units, then in concentration units
+data.nodecay <- biotek.data
+data.nodecay <- data.nodecay %>%
+  group_by(condition) %>%
+  mutate(relevant = ifelse(Time < cutoff_time, "relevant", "discarded")) %>%
+  filter(relevant == "relevant") %>%
+  mutate(observed = fluorescence) %>%
+  do(run_nls(., decay_type='none')) %>%
+  plot_data(decay_type='none', units='fluor') %>%
+  mutate(observed = conc - conc*((max(fluorescence, na.rm=T) - fluorescence)/(max(fluorescence, na.rm=T) - min.fluorescence))) %>%
+  do(run_nls(., decay_type='none')) %>%
+  plot_data(decay_type='none', units='conc')
+```
