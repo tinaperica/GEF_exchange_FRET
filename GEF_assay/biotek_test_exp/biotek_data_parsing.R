@@ -27,7 +27,7 @@ outfile <- "GEF_assay/biotek_test_exp/data/good_data_parsed.txt"
 ###############################
 dataset_to_save <- mutate(dataset, "condition" = paste(date, sample, well, conc, sep = "-")) %>%
   mutate("row" = str_sub(well, 1, 1), "column" = str_sub(well, 2))
-dataset_to_plot <- filter(dataset_to_save, Time < 3000) %>%
+dataset_to_plot <- filter(dataset_to_save, Time < 1000) %>%
   group_by(condition) %>%
   mutate("norm_fluorescence" = 1 - ((quantile(fluorescence, prob = 0.999, na.rm = T) - fluorescence) / 
                                 (quantile(fluorescence, prob = 0.999, na.rm = T) - quantile(fluorescence, prob = 0.001, na.rm = T))) )
@@ -38,6 +38,15 @@ ggsave("GEF_assay/biotek_test_exp/good_data_raw_fluorescence.pdf", width = 15, h
 ggplot(dataset_to_plot, aes(x = Time, y = norm_fluorescence, color = sample)) +
   facet_wrap(~ conc) + geom_point(stroke = 0, shape = 16, size = 0.8, show.legend = T)
 ggsave("GEF_assay/biotek_test_exp/good_data_norm_fluorescence.pdf",  width = 15, height = 10, units = "in")
+
+filter(dataset_to_plot, conc > 0.5) %>%
+  arrange(conc) %>%
+  ggplot(aes(x = Time, y = norm_fluorescence, color = conc)) +
+    facet_wrap(~ sample) + geom_point(stroke = 0, shape = 16, size = 0.8, show.legend = T) +
+  scale_colour_gradientn(colours = terrain.colors(40))
+ggsave("GEF_assay/biotek_test_exp/by_sample_good_data_norm_fluorescence.pdf",  width = 15, height = 10, units = "in")
+
+
 #ggplot(dataset_to_plot, aes(x = Time, y = norm_fluorescence, color = condition)) + 
  #   facet_wrap(~ sample) +
   #  geom_point(show.legend = T)

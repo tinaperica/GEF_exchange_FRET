@@ -15,8 +15,8 @@ proteins <- unique(biotek.data$sample)
   group_by(condition) %>%
   mutate(relevant = ifelse(Time < cutoff_time, "relevant", "discarded")) %>%
   filter(relevant == "relevant") %>%
-  mutate(max.fluorescence = quantile(fluorescence, prob = 0.99, na.rm = T), 
-         min.fluorescence = quantile(fluorescence, prob = 0.01, na.rm = T)) %>%
+  mutate(max.fluorescence = quantile(fluorescence, prob = 0.999, na.rm = T), 
+         min.fluorescence = quantile(fluorescence, prob = 0.001, na.rm = T)) %>%
   mutate(substrate_conc = conc - conc*((max.fluorescence - fluorescence)/(max.fluorescence - min.fluorescence)))
 )
 conditions <- unique(data.to.fit$condition)
@@ -67,7 +67,7 @@ fit_MM <- function (fitted.parameters) {
   Km <- round(coef(nls.out)[2], 3)
   kcat = Vmax
   standard_errors_of_parameters <- round(summary(nls.out)$coefficients[, 2], 3)
-  kcat_error <- round(as.numeric(standard_errors_of_parameters[[1]]), 3) / (GEF_conc)
+  kcat_error <- round(as.numeric(standard_errors_of_parameters[[1]]), 3) #/ (GEF_conc)
   Km_error <- round(as.numeric(standard_errors_of_parameters[[2]]), 3)
   summary <- summary(nls.out)
   sd_of_fit <- round(as.numeric(summary[["sigma"]]), 3)
@@ -75,9 +75,9 @@ fit_MM <- function (fitted.parameters) {
                 "sd_of_fit" = sd_of_fit, "predicted.conc" = predicted.line.data.frame$conc, "predicted.line" = predicted.line.data.frame$v0))
 }
 
-exp.fitting.parameters <-  data.to.fit %>% group_by(sample, conc, condition, GEF_conc) %>%
-  #filter(conc < 10) %>%
-  select(Time, substrate_conc, condition, sample, conc, GEF_conc) %>%
+exp.fitting.parameters <-  data.to.fit %>% group_by(sample, conc, condition, date, GEF_conc) %>%
+  filter(conc < 9) %>%
+  select(Time, substrate_conc, date, condition, sample, conc, GEF_conc) %>%
   do(data.frame(fit_exp_decay(.)))
 
 plots <- list()
@@ -92,50 +92,49 @@ for (i in seq_along(conditions)) {
   }
 }
 
-pdf("GEF_assay/exp_fitted_data.pdf")
-print(plots)
-dev.off()
+#pdf("GEF_assay/exp_fitted_data.pdf")
+#print(plots)
+#dev.off()
 
-# linear.fitting.parameters <-  data.to.fit %>% group_by(sample, conc, condition, GEF_conc) %>%
-#   select(Time, substrate_conc, condition, sample, conc, GEF_conc) %>%
-#   filter(conc >= 12) %>%
-#   do(data.frame(fit_linear_decay(.)))
-# mean.linear.fitting.parameters <- linear.fitting.parameters %>% 
-#   mutate("round_conc" = round(conc, 0)) %>%
-#   group_by(sample, round_conc) %>%
-#   summarise("mean_v0" = mean(v0))
-# 
-# plots <- list()
-# for (i in seq_along(conditions)) {
-#   fitted.data <- linear.fitting.parameters %>% filter(condition == conditions[i])
-#   concentrations <- fitted.data$conc
-#   raw.data <- data.to.fit %>% filter(condition == conditions[i] & conc %in% concentrations)
-#   if (nrow(raw.data) > 0) {
-#     plots[[i]] <- ggplot(raw.data, mapping = aes(x = Time, y = substrate_conc)) + 
-#       geom_point(color = "black") + geom_abline(slope = fitted.data$slope, intercept = fitted.data$intercept, color = "red") + 
-#       ggtitle(conditions[i])
-#   }
-# }
-# 
-# pdf("GEF_assay/linear_fitted_data.pdf")
-# print(plots)
-# dev.off()
+linear.fitting.parameters <-  data.to.fit %>% group_by(sample, conc, condition, date, GEF_conc) %>%
+  select(Time, substrate_conc, condition, date, sample, conc, GEF_conc) %>%
+  filter(conc >= 9) %>%
+  do(data.frame(fit_linear_decay(.)))
+mean.linear.fitting.parameters <- linear.fitting.parameters %>%
+  mutate("round_conc" = round(conc, 0)) %>%
+  group_by(sample, round_conc) %>%
+  summarise("mean_v0" = mean(v0))
+
+plots <- list()
+for (i in seq_along(conditions)) {
+  fitted.data <- linear.fitting.parameters %>% filter(condition == conditions[i])
+  concentrations <- fitted.data$conc
+  raw.data <- data.to.fit %>% filter(condition == conditions[i] & conc %in% concentrations)
+  if (nrow(raw.data) > 0) {
+    plots[[i]] <- ggplot(raw.data, mapping = aes(x = Time, y = substrate_conc)) +
+      geom_point(color = "black") + geom_abline(slope = fitted.data$slope, intercept = fitted.data$intercept, color = "red") +
+      ggtitle(conditions[i])
+  }
+}
+
+#pdf("GEF_assay/linear_fitted_data.pdf")
+#print(plots)
+#dev.off()
 
 #ggplot(linear.fitting.parameters, aes(x = conc, y = v0, color = sample)) + geom_point()
 
 #ggplot(mean.linear.fitting.parameters, aes(x = round_conc, y = mean_v0, color = sample)) + geom_point()
+# 
+# chosen.linear.fitting.parameters <- linear.fitting.parameters %>%
+#   select(sample, conc, condition, GEF_conc, v0) %>%
+#  filter(conc >= 8)
+# chosen.exp.fitting.parameters <- exp.fitting.parameters %>%
+# select(sample, conc, condition, GEF_conc, v0) %>%
+# filter(conc < 8)
 
-#chosen.linear.fitting.parameters <- linear.fitting.parameters %>% 
- #   select(sample, conc, condition, GEF_conc, v0) %>%
-  #  filter(conc >= 8)
-#chosen.exp.fitting.parameters <- exp.fitting.parameters %>%
- # select(sample, conc, condition, GEF_conc, v0) %>%
-  #filter(conc < 8)
-  
 #combined.fitting.parameters <- bind_rows(chosen.exp.fitting.parameters, chosen.linear.fitting.parameters)
 
-#combined.fitting.parameters <- bind_rows(exp.fitting.parameters, linear.fitting.parameters)
-combined.fitting.parameters <- exp.fitting.parameters
+combined.fitting.parameters <- bind_rows(exp.fitting.parameters, linear.fitting.parameters)
 
 mean.combined.fitting.parameters <- combined.fitting.parameters %>% 
   mutate("round_conc" = round(conc, 1)) %>%
@@ -145,12 +144,71 @@ mean.combined.fitting.parameters <- combined.fitting.parameters %>%
 MM.parameters <-  combined.fitting.parameters %>% group_by(sample) %>%
   select(sample, conc, v0, GEF_conc) %>%
   do(data.frame(fit_MM(.)))
-
+MM.summary <- MM.parameters %>% 
+  select(-predicted.conc, -predicted.line) %>% 
+  unique() %>% 
+  mutate("kcat.Km" = kcat / Km)
 ggplot(combined.fitting.parameters, aes(x = conc, y = v0, color = sample)) + 
   geom_point() + geom_line(MM.parameters, mapping = aes(x = predicted.conc, y = predicted.line, color = sample))
+ggplot(MM.summary, aes(x = Km))
 
-ggplot(mean.combined.fitting.parameters, aes(x = round_conc, y = mean_v0, color = sample)) + 
-        geom_point() + geom_smooth(MM.parameters, mapping = aes(x = predicted.conc, y = predicted.line, color = sample))
+plots <- list()
+for (i in seq_along(proteins)) {
+  protein <- proteins[i]
+  to_plot <- combined.fitting.parameters %>% filter(sample == protein)
+  MM_to_plot <- MM.parameters %>% filter(sample == protein)
+  plots[[i]] <- ggplot(to_plot, mapping = aes(x = conc, y = v0, color = as.character(date))) + 
+    geom_point() + geom_line(MM_to_plot, mapping = aes(x = predicted.conc, y = predicted.line), color = "black") +
+    ggtitle(protein)
+}
+pdf("GEF_assay/per_experiment_MM.pdf")
+print(plots)
+dev.off()
+
+ggplot(mean.combined.fitting.parameters, aes(x = round_conc, y = mean_v0, color = sample)) + geom_point() +
+        geom_smooth(MM.parameters, mapping = aes(x = predicted.conc, y = predicted.line, color = sample))
+
+
+
+#filename <- paste0("GEF_assay/", Sys.Date(), "kcat_Km_GEF_exchange.pdf")
+#pdf(filename)
+op<-par(mfrow=c(1,3))
+kcat.barplot <- barplot(height = MM.summary$kcat, names.arg = MM.summary$sample,
+                        main = "kcat of GEF exchange", ylab = bquote("kcat / s-1"),
+                        xaxt = "n", cex.names = 0.75, ylim = c(0,11))
+text(x = kcat.barplot, y = par("usr")[3] - 0.3, srt = 45, adj = 1, labels = MM.summary$sample, xpd = TRUE)
+segments(kcat.barplot, MM.summary$kcat - MM.summary$kcat_error, kcat.barplot,
+         MM.summary$kcat + MM.summary$kcat_error, lwd = 1.5)
+arrows(kcat.barplot, MM.summary$kcat - MM.summary$kcat_error, kcat.barplot,
+       MM.summary$kcat + MM.summary$kcat_error, lwd = 1.5, angle = 90,
+       code = 3, length = 0.05)
+Km.barplot <- barplot(height = MM.summary$Km, names.arg = MM.summary$sample,
+                      main = "Km of GEF exchange", ylab = bquote("Km / " *mu~M),
+                      xaxt = "n", cex.names = 0.75, ylim = c(0,20))
+text(x = Km.barplot, y = par("usr")[3] - 1, srt = 45, adj = 0.7, labels = MM.summary$sample, xpd = TRUE)
+segments(Km.barplot, MM.summary$Km - MM.summary$Km_error, Km.barplot,
+         MM.summary$Km + MM.summary$Km_error, lwd = 1.5)
+arrows(Km.barplot, MM.summary$Km - MM.summary$Km_error, Km.barplot,
+       MM.summary$Km + MM.summary$Km_error, lwd = 1.5, angle = 90,
+       code = 3, length = 0.05)
+
+kcatKm.barplot <- barplot(height = MM.summary$kcat.Km, names.arg = MM.summary$sample,
+                      main = "kcat/Km of GEF exchange", ylab = bquote("kcat/Km / " *mu~Ms),
+                      xaxt = "n", cex.names = 0.75, ylim = c(0,10))
+text(x = kcatKm.barplot, y = par("usr")[3] - 0.25, srt = 45, adj = 1, labels = MM.summary$sample, xpd = TRUE)
+#segments(kcatKm.barplot, MM.summary$kcat.Km - (MM.summary$kcat_error+MM.summary$Km_error), kcatKm.barplot,
+ #        MM.summary$kcat.Km + (MM.summary$kcat_error+MM.summary$Km_error), lwd = 1.5)
+#rrows(kcatKm.barplot, MM.summary$kcat.Km - (MM.summary$kcat_error+MM.summary$Km_error), kcatKm.barplot,
+ #      MM.summary$Km + (MM.summary$kcat_error+MM.summary$Km_error), lwd = 1.5, angle = 90,
+  #     code = 3, length = 0.05)
+
+
+#dev.off()
+op<-par(mfrow=c(1,1))
+# 
+# 
+# 
+
 
 
 

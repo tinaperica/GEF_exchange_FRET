@@ -8,15 +8,15 @@ SubstrateDilute <- function(stock, work, volume, Mw) {
 }
 
 ### Set up  experiment parameters
-plate <- 4
-row <- "A"
-date <- "20180213"
+plate <- 6
+row <- "G"
+date <- "20180220"
 outdir <- "GEF_assay/biotek_test_exp/"
-Rans <- c("PE9_D79S", "PE10_G80A")
+Rans <- c("PE5_R108A", "PE6_H141V")
 GEFs <- c("SRM1")
 GEF.stock <- 500  # nM
 GEF.working <- 5 # nM
-Rans.stock.conc <- c(40, 40)
+Rans.stock.conc <- c(33.72, 41.67)
 nucleotides<-c('mant-GTP')
 nucleotide.stock.conc <- 2000
 #mant.stock <- 2000 # uM
@@ -24,15 +24,25 @@ nucleotide.working <- 200 # uM
 reaction.volume <- 100 # ul
 Ran.premix.volume <- 110
 final.Ran.conc <- list()
-final.Ran.conc[[1]] = c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.5, 5, 5.5, 6, 7, 9, 10, 11)
-final.Ran.conc[[2]] = c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.5, 5, 5.5, 6, 7, 9, 10, 11)
+#final.Ran.conc[[1]] = c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 12)
+#final.Ran.conc[[2]] = c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 12)
 #final.Ran.conc[[1]] = c(1.75, 2, 2.5, 3, 3.75, 4)
 #final.Ran.conc[[2]] = c(1.75, 2, 2.5, 3, 3.75, 4)
 #final.Ran.conc[[1]] = c(0.25, 0.75, 1, 1.5, 2.25, 3.25)
 #final.Ran.conc[[2]] = c(0.25, 0.75, 1, 1.5, 2.25, 3.25)
-#final.Ran.conc[[1]] = c(0.5, 1.25, 2.75, 3.5, 4.5, 5)
-#final.Ran.conc[[2]] = c(0.5, 1.25, 2.75, 3.5, 4.5, 5)
-#final.Ran.conc[[1]] = c(0.5, 1, 1.5, 2, 2.5, 3, 5, 6, 8, 10, 11, 13)
+#final.Ran.conc[[1]] = c(0.5, 1.25, 2.75, 3.5, 4.5, 6)
+#final.Ran.conc[[2]] = c(0.5, 1.25, 2.75, 3.5, 4.5, 6)
+#final.Ran.conc[[1]] = c(5, 7, 8, 9, 10, 12)
+#final.Ran.conc[[2]] = c(5, 7, 8, 9, 10, 12)
+#final.Ran.conc[[1]] = c(0.25, 0.75, 1, 1.75, 2.5, 4)
+#final.Ran.conc[[2]] = c(0.25, 0.75, 1, 1.75, 2.5, 4)
+#final.Ran.conc[[1]] = c(0.5, 1.5, 2, 3, 3.5, 4.5)
+#final.Ran.conc[[2]] = c(0.5, 1.5, 2, 3, 3.5, 4.5)
+#final.Ran.conc[[1]] = c(2.75, 3.75, 4.75, 5.5, 6, 6.5)
+#final.Ran.conc[[2]] = c(2.75, 3.75, 4.75, 5.5, 6, 6.5)
+#final.Ran.conc[[1]] = c(5, 7, 8, 9, 10, 12)
+#final.Ran.conc[[2]] = c(5, 7, 8, 9, 10, 12)
+final.Ran.conc[[1]] = c(0.25, 0.75, 1, 1.75, 2.5, 4, 0.5, 1.5, 2, 3, 3.5, 4.5, 2.75, 3.75, 4.75, 5.5, 6, 6.5, 5, 7, 8, 9, 10, 12)
 
 nucleotide.V = reaction.volume/(nucleotide.stock.conc/nucleotide.working)
 GEF.V <- round(reaction.volume/(GEF.stock/GEF.working), 2)

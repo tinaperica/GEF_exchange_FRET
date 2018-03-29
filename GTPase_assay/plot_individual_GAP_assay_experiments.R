@@ -1,8 +1,8 @@
 ### plot and analyse GTPase assay with phosphate sensor data
 options( stringsAsFactors = F )
 setwd("GTPase_assay")
-exp_date <- "20170327"
-data <- read.delim(paste0("data/", exp_date, "_TP_GAP_kinetics_parsed.txt"), head = F)
+exp_date <- "20170405"
+data <- read.delim(paste0("data/", exp_date, "_TP_GAP_kinetics2_parsed.txt"), head = F)
 names(data) <- expression( date, time, row, column, sample, conc, GAP_conc, fluorescence)
 head(data)
 data$prot_conc <- do.call(paste, c(data[, c("date", "sample", "conc", "GAP_conc", "row", "column")], sep = " "))
@@ -14,12 +14,12 @@ for ( i in seq_along(proteins) ) {
   data_prot <- data[data$sample == proteins[i],]
   samples <- unique(as.character(data_prot$prot_conc))
   col_list <- list(samples, rainbow(length(samples)) )
-  plot(data_prot$time, data_prot$fluorescence, xlab = "time / s", ylab = "fluorescence", type = "n", ylim = c(5000, 50000))
+  plot(data_prot$time, data_prot$fluorescence, xlab = "time / s", ylab = "fluorescence", type = "n", ylim = c(5000, 40000))
   for (i in seq_along(samples)) {
     temp <- data_prot[ data_prot$prot_conc == samples[i], ]
     points(temp$time, temp$fluorescence, col = col_list[[2]][i], pch = 20, cex = 0.5)
   }
-  legend("top", legend = col_list[[1]], title = "Ran conc / uM and GAP conc / nM", fill = col_list[[2]], bty = "n", cex = 0.6)
+  legend("topleft", legend = col_list[[1]], title = "Ran conc / uM and GAP conc / nM", fill = col_list[[2]], bty = "n", cex = 0.6)
   dev.off()
 }
 # predict.lo <- loess(fluorescence ~ time, temp, span = 0.3)

@@ -6,39 +6,23 @@ get_volume <- function (stock, final) {
   round( reaction.volume / (stock/final) , 1 ) 
 }
 proteins <- c( 
-              "PE3:GTP_LOW", "PE3:GTP_HIGH",
-              "PE4:GTP_LOW", "PE4:GTP_HIGH",
-              
-              "PE13:GTP_LOW", "PE13:GTP_HIGH"
+              "PE1:GTP_1", "PE1:GTP_2"
               )
 protein_stocks <- c(
-                    10.44, 17.42,
-                    19.49, 29.55,
-                    
-                    28.60, 40.53
-                    ) # uM
-sensor_stock <- 100  # original stock is 500 uM, diluted in the assay buffer 5x
+  25.41, 126.05
+              ) # uM
+sensor_stock <- 500 # original stock is 500 uM, diluted in the assay buffer 5x
 #GAP_stock <- 5 # uM
 ### final reaction concentrations of Gsp1:GTP (order the same as in the proteins vector)
 final_c <- list()
-#final_c[[1]] <- c(2) # uM
-#final_c[[2]] <- c(3) # uM
-final_c[[3]] <- c(1, 3, 4) # uM
-final_c[[4]] <- c(2) # uM
-final_c[[5]] <- c(1, 2, 3) # uM
-final_c[[6]] <- c(3, 4, 5, 6, 7) # uM
-
+final_c[[1]] <- c() # uM
+final_c[[2]] <- c(4) # uM
 
 #### Gsp1 concentrations to run without GAP (to measure intrinsinc hydrolysis)
 intrinsinc_c <- list()
-# intrinsinc_c[[2]] <- c(3)
-# intrinsinc_c[[3]] <- c(3)
-# intrinsinc_c[[4]] <- c(3)
-# intrinsinc_c[[6]] <- c(3)
-# intrinsinc_c[[7]] <- c(3)
-# intrinsinc_c[[8]] <- c(3)
+intrinsinc_c[[1]] <- c(1)
 
-final_sensor <- 4 # uM
+final_sensor <- 18 # uM
 sensor.V = get_volume(sensor_stock, final_sensor)
 final_GAP <- 6 # nM
 

@@ -1,0 +1,12 @@
+G1	PE1_WT	1	mant-dGDP	1
+G2	PE1_WT	1.5	mant-dGDP	1
+G3	PE1_WT	2	mant-dGDP	1
+G4	PE1_WT	3	mant-dGDP	1
+G5	PE1_WT	3	mant-dGDP	0
+G6	PE1_WT	3	mant-dGTP	1
+G7	PE1_WT	3	mant-dGTP	0
+G8	PE1_WT	4	mant-dGDP	1
+G9	PE1_WT	5	mant-dGDP	1
+G10	PE1_WT	6	mant-dGDP	1
+G11	PE1_WT	8	mant-dGDP	1
+G12	PE1_WT	10	mant-dGDP	1

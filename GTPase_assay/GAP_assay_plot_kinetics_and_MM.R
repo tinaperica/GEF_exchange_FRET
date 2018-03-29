@@ -3,18 +3,18 @@ library(ggplot2)
 
 ### plot and analyse GTPase assay with phosphate sensor data
 options( stringsAsFactors = F )
-setwd("GTPase_assay")
 conversion_factor = 0.0001064242 # uM / fluorescence
 base_fluorescence = 9726.956
 fluorescence.at.2uM.Pi <- 27173.39 - base_fluorescence
 outsufix <- paste("_fitted_curves_", Sys.Date(), ".pdf", sep = "")
 
-data <- read.delim("data/GAP_kinetics.txt", head = F)
+data <- read.delim("GTPase_assay/data/GAP_kinetics.txt", head = F)
 names(data) <- expression( date, time, row, column, sample, conc, GAP_conc, fluorescence)
+data <- data[data$time > 500,]
 head(data)
 data$well <- do.call(paste0, data[c("row", "column")])
 
-data.to.discard <- read.delim("data/GAP_assay_data_to_discard.txt", head = T) ### defined as date of exp, prot, prot conc, and GEF conc
+data.to.discard <- read.delim("GTPase_assay/data/GAP_assay_data_to_discard.txt", head = T) ### defined as date of exp, prot, prot conc, and GEF conc
 #####
 data<-cbind(data, paste(data$date, data$sample, data$conc, data$GAP_conc, data$well, sep = " "))
 names(data)[length(names(data))] <- "unique"  #### unique is a combination of experiment date and conditions (Ran and GAP conc and well)
@@ -26,6 +26,23 @@ data.to.discard$unique <- do.call(paste, df_args)
 unique_identifiers_to_discard <- as.character(data.to.discard$unique)
 data.discarded <- data[data$unique %in% unique_identifiers_to_discard,]
 data <- data[! data$unique %in% unique_identifiers_to_discard,]
+
+
+for ( i in seq_along(proteins) ) {
+  plot_filename <- paste0("GTPase_assay/", proteins[i], "_analysed_GAP_assay_exp.pdf")
+  pdf(plot_filename)
+  data_prot <- data[data$sample == proteins[i],]
+  samples <- unique(as.character(data_prot$conc))
+  col_list <- list(samples, rainbow(length(samples)) )
+  plot(data_prot$time, data_prot$fluorescence, xlab = "time / s", ylab = "fluorescence", type = "n") #, ylim = c(5000, 40000))
+  for (j in seq_along(samples)) {
+    temp <- data_prot[ data_prot$conc == samples[j], ]
+    points(temp$time, temp$fluorescence, col = col_list[[2]][j], pch = 20, cex = 0.5)
+  }
+  legend("topleft", legend = col_list[[1]], title = "Ran conc / uM and GAP conc / nM", fill = col_list[[2]], bty = "n", cex = 0.6)
+  dev.off()
+}
+
 
 ### correct substrate concentration based on loading
 #max_fluorescence_per_sample <- with(data, aggregate(fluorescence, by = list(sample = sample), max))
@@ -52,11 +69,26 @@ get_region_to_fit <- function (data) {
 get_linear_region <- function(data) {
   relevant_data <- get_region_to_fit(data)
   relevant_data <- cbind(relevant_data, "fluor_diff" = relevant_data$fluorescence - min(relevant_data$fluorescence))
-  linear_times <- sort(relevant_data$time[relevant_data$fluor_diff < (0.7 * max(relevant_data$fluor_diff))])
-  cutoff_time <- linear_times[-1]
-  relevant_data <- data[data$time < cutoff_time,]
-  relevant_data <- relevant_data[order(relevant_data$time),]
-  return(relevant_data)
+  
+  reaction_percentages <- seq(0.2, 0.4, 0.05)
+  points_check <- TRUE
+  for (i in reaction_percentages) {
+    if (points_check) {
+      linear_times <- sort(relevant_data$time[relevant_data$fluor_diff < (i * max(relevant_data$fluor_diff))])
+      if ( length (linear_times) >= 100) {
+        points_check <- FALSE
+      }
+    }
+  }
+  cutoff_time <- linear_times[length(linear_times)]
+  linear_data <- data[data$time < cutoff_time,]
+  linear_data <- linear_data[order(linear_data$time),]
+  return(linear_data)
+  # linear_times <- sort(relevant_data$time[relevant_data$fluor_diff < (0.3 * max(relevant_data$fluor_diff))])
+  # cutoff_time <- linear_times[length(linear_times)]
+  # relevant_data <- data[data$time < cutoff_time,]
+  # relevant_data <- relevant_data[order(relevant_data$time),]
+  # return(relevant_data)
 }
 fit_one_phase_association <- function (data) {
   opar <- par()
@@ -87,10 +119,14 @@ fit_one_phase_association <- function (data) {
 }
 
 
-fit_linear_rate <- function (data) {
+fit_linear_rate <- function (data, GAP_conc) {
   #opar <- par()
   #op<-par(mfrow=c(2,1))
-  relevant.subset <- get_linear_region(data)
+  if (GAP_conc > 0) {
+    relevant.subset <- get_linear_region(data)
+  } else {
+    relevant.subset <- data
+  }
   time <- unique(relevant.subset$time)
   #f0 = min(relevant.subset$fluorescence, na.rm = T)
   #fmax = max(relevant.subset$fluorescence, na.rm = T)
@@ -127,9 +163,9 @@ fit_MichaelisMenten <- function (initial_vs_conc, prot) {
   predicted.line.data.frame <- data.frame(conc = test.conc, v0 = predicted.line, prot = prot)
   Vmax <- round(coef(nls.out)[1], 3)
   Km <- round(coef(nls.out)[2], 3)
-  kcat = Vmax
+  kcat = Vmax / GAP_conc
   standard_errors_of_parameters <- round(summary(nls.out)$coefficients[, 2], 3)
-  kcat_error <- round(as.numeric(standard_errors_of_parameters[[1]]), 3)
+  kcat_error <- round(as.numeric(standard_errors_of_parameters[[1]]), 3) / GAP_conc
   Km_error <- round(as.numeric(standard_errors_of_parameters[[2]]), 3)
   summary <- summary(nls.out)
   sd_of_fit <- round(as.numeric(summary[["sigma"]]), 3)
@@ -142,7 +178,7 @@ fitting_parameters <- data.frame()
 for (p in seq_along(proteins)) {
   prot <- proteins[p]
   #filename = paste0(Sys.Date(), "_", substr(prot, 1,4), outsufix)
-  filename = paste0(Sys.Date(), "_", prot, outsufix)
+  filename = paste0("GTPase_assay/", Sys.Date(), "_", prot, outsufix)
   pdf(file = filename, height = 10)
   corrected_concentrations <- unique(data$corrected_conc[data$sample == prot])
   for (cc in seq_along(corrected_concentrations)) {
@@ -158,8 +194,8 @@ for (p in seq_along(proteins)) {
           well <- wells[w]
           data.subset <- data[data$sample == prot & data$corrected_conc == conc & data$GAP_conc == GAP_conc & data$date == exp & data$well == well,]
           data.subset <- data.subset[order(data.subset$time),]
-          #rates <- fit_linear_rate(data.subset)
-          rates <- fit_one_phase_association(data.subset)
+          rates <- fit_linear_rate(data.subset, GAP_conc)
+          #rates <- fit_one_phase_association(data.subset, GAP_conc)
           rates <- cbind(rates, data.frame(prot, conc, GAP_conc, exp, well))
           fitting_parameters <- rbind(fitting_parameters, rates)
         }
@@ -174,13 +210,15 @@ fitting_parameters <- cbind(fitting_parameters, data.frame(
               fitting_parameters$converted_rate / (fitting_parameters$GAP_conc/1000),
               fitting_parameters$converted_rate)
   ))
+intrinsic_hydrolysis <- fitting_parameters[fitting_parameters$GAP_conc == 0, ]
 fitting_parameters <- fitting_parameters[fitting_parameters$GAP_conc != 0,]
+#fitting_parameters <- fitting_parameters[! fitting_parameters$prot %in% c("PE1:GTP", "PE2:GTP"),]
 MM.parameters <- list()
 KmVm.param.df <- data.frame()
 KmVm.curve.to.plot <- data.frame()
 Kmkcat.df <- data.frame()
-for (i in seq_along(proteins)) {
-  mutant = proteins[i]
+for (i in seq_along(unique(fitting_parameters$prot))) {
+  mutant = unique(fitting_parameters$prot)[i]
   data.subset <- fitting_parameters[fitting_parameters$prot == mutant, ]
   data.subset <- data.subset[, c("conc", "v0", "GAP_conc")]
   data.subset <- data.subset[order(data.subset$conc),]
@@ -194,17 +232,36 @@ plot <- plot + geom_line(data = KmVm.curve.to.plot)
 
 plot <- plot + xlab(expression('Ran:GTP concentration / ' * mu ~ M)) + ylab(expression('Initial exchange rate' ~ v[0] ~ '/[' ~ mu ~ M ~ 'GAP conc]' ~ s^-1))
 
-filename <- paste0("MichaelisMenten_", Sys.Date(), ".pdf")
+filename <- paste0("GTPase_assay/MichaelisMenten_", Sys.Date(), ".pdf")
 pdf(file = filename, width = 10)
 print(plot)
 dev.off()
 
+pairwise_filename <- paste("GTPase_assay/GTPase_assay_pairwise_MM_plots_", Sys.Date(), ".pdf", sep = "")
+pdf(file = pairwise_filename, width = 10)
+for (i in seq_along(proteins)) {
+  protein = proteins[i]
+  wt <- "PE1:GTP"
+  if (protein != wt) {
+    temp.data <- subset(fitting_parameters, (prot == protein | prot == wt))
+    temp.curve <- subset(KmVm.curve.to.plot, (prot == protein | prot == wt))
+    plot <- ggplot(data = temp.data, aes(x = conc, y = v0, color = prot))
+    plot <- plot + geom_line(data = temp.curve)
+    plot <- plot + geom_point(data = temp.data, aes(x = conc, y = v0, group = interaction(prot, GAP_conc), color = prot))
+    plot <- plot + xlab(bquote("Substrate (Ran:GTP) concentration / " *mu~M)) + ylab(bquote('Initial exchange rate '~v[0]~'/ [GAP conc]' ~s^-1))
+    print(plot)
+  }
+}
+dev.off()
 
-KmVm.param.df <- KmVm.param.df[KmVm.param.df$prot != "PE3:GTP",]
+KmVm.param.df <- KmVm.param.df[! KmVm.param.df$prot %in% c("PE1:GTP", "PE2:GTP"),]
 
+filename <- paste0("GTPase_assay/", Sys.Date(), "_kcat_Km_GAP_assay.pdf")
+pdf(filename)
+op<-par(mfrow=c(3,1))
 Km.barplot <- barplot(height = KmVm.param.df$Km, names.arg = KmVm.param.df$prot, 
                       main = "Km of GAP mediated GTP hydrolysis", ylab = bquote("Km / " *mu~M),
-                      xaxt = "n", cex.names = 0.75, ylim = c(0,10))
+                      xaxt = "n", cex.names = 0.75, ylim = c(0,20))
 text(x = Km.barplot, y = par("usr")[3] - 1, srt = 45, adj = 1, labels = KmVm.param.df$prot, xpd = TRUE)
 segments(Km.barplot, KmVm.param.df$Km - KmVm.param.df$Km_error, Km.barplot,
          KmVm.param.df$Km + KmVm.param.df$Km_error, lwd = 1.5)
@@ -216,14 +273,19 @@ arrows(Km.barplot, KmVm.param.df$Km - KmVm.param.df$Km_error, Km.barplot,
 
 kcat.barplot <- barplot(height = KmVm.param.df$kcat, names.arg = KmVm.param.df$prot, 
                         main = "kcat of GAP mediated GTP hydrolysis", ylab = bquote("kcat / s-1"),
-                        xaxt = "n", cex.names = 0.6, ylim = c(0,0.35))
-text(x = kcat.barplot, y = par("usr")[3] - 0.3, srt = 45, adj = 1, labels = KmVm.param.df$prot, xpd = TRUE)
+                        xaxt = "n", cex.names = 0.6, ylim = c(0,0.1))
+text(x = kcat.barplot, y = par("usr")[3], srt = 45, adj = 1, labels = KmVm.param.df$prot, xpd = TRUE)
 segments(kcat.barplot, KmVm.param.df$kcat - KmVm.param.df$kcat_error, kcat.barplot,
          KmVm.param.df$kcat + KmVm.param.df$kcat_error, lwd = 1.5)
 arrows(kcat.barplot, KmVm.param.df$kcat - KmVm.param.df$kcat_error, kcat.barplot,
        KmVm.param.df$kcat + KmVm.param.df$kcat_error, lwd = 1.5, angle = 90,
        code = 3, length = 0.05)
 
+intrinsic.barplot <- barplot(height = intrinsic_hydrolysis$v0, names.arg = intrinsic_hydrolysis$prot, 
+                      main = "intrinsic GTP hydrolysis v0", ylab = bquote("v0 / s-1"),
+                      xaxt = "n", cex.names = 0.3, ylim = c(0,6e-5))
+text(x = intrinsic.barplot, y = par("usr")[3], srt = 45, adj = 1, labels = intrinsic_hydrolysis$prot, xpd = TRUE)
 
+dev.off()
 
 
