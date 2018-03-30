@@ -4,7 +4,10 @@ library(stringr)
 data <- data.frame()
 ####### a function to read in all the biotek files, gather the data and reformat time
 read_and_gather <- function(file) {
-  data_in <-  read_delim(file, delim = "\t", col_names = T, skip = 48)
+  
+  n_skip = 
+  
+  data_in <-  read_delim(file, delim = "\t", col_names = T, skip = 48, locale = locale(encoding = 'UTF-8'))
   #data_in <- select(data_in, -one_of("Temp"))
   data_in <- select(data_in, -Temp)
   data_gathered <- as.tibble(gather(data_in, key = well, value = fluorescence, -Time))
