@@ -13,7 +13,8 @@ read_and_gather <- function(file) {
   } else {
     n_rows_to_read <- 3000
   }
-  data_in <-  read_delim(file, delim = "\t", col_names = T, skip = (first_data_row - 1), n_max = n_rows_to_read)
+  data_in <-  read_delim(file, delim = "\t", col_names = T, skip = (first_data_row - 1),
+                  n_max = n_rows_to_read, locale = locale(encoding = 'UTF-8'))
   data_in <- select(data_in, -Temp)
   data_gathered <- as.tibble(gather(data_in, key = well, value = fluorescence, -Time))
   data_gathered$Time <- as.numeric(hms(data_gathered$Time))   #### hms gives a warning when parsing 00:00:00
