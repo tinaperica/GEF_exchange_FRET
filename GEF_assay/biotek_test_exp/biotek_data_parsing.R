@@ -10,11 +10,13 @@ read_and_gather <- function(file) {
   last_data_row <- grep(raw_in, pattern = "Results")
   if (length(last_data_row) > 0) {
     n_rows_to_read <- last_data_row - first_data_row - 2
+    data_in <-  read_delim(file, delim = "\t", col_names = T, skip = (first_data_row - 1),
+                           n_max = n_rows_to_read, locale = locale(encoding = 'UTF-8'))
   } else {
-    n_rows_to_read <- 3000
+    data_in <-  read_delim(file, delim = "\t", col_names = T, skip = (first_data_row - 1),
+                           locale = locale(encoding = 'UTF-8'))
   }
-  data_in <-  read_delim(file, delim = "\t", col_names = T, skip = (first_data_row - 1),
-                  n_max = n_rows_to_read, locale = locale(encoding = 'UTF-8'))
+  
   data_in <- select(data_in, -Temp)
   data_gathered <- as.tibble(gather(data_in, key = well, value = fluorescence, -Time))
   data_gathered$Time <- as.numeric(hms(data_gathered$Time))   #### hms gives a warning when parsing 00:00:00

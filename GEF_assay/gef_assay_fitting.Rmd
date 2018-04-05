@@ -17,8 +17,9 @@ biotek.data <- read_delim(inputfilename, delim = "\t", col_names = T)
 
 ```{r}
 run_nls <- function(data, background_type, deadtime) {
-  
-  # print(unique(data$condition))
+  c0 <- data$conc[1]
+  GEF_conc <- data$GEF_conc[1]
+  print(unique(data$condition))
   #### add the (estimated) dead time
   if (deadtime > 0) {
     deadtime_timepoints <- seq(-1*(deadtime), -5, 5)
@@ -27,70 +28,64 @@ run_nls <- function(data, background_type, deadtime) {
     timepoints_to_append$observed <- NA
     data <- rbind(data, timepoints_to_append)
   }
+  ##### fit the curves in fluorescence units (assuming that the background (photobleaching) is either linear or exponential)
   if (background_type == 'linear') {
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0, k_background = 0)
-    out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c + k_background * Time,
+    max.f <- max(data$observed, na.rm = T)
+    min.f <- min(data$observed, na.rm = T)
+    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, f_plateau = min.f, k_background = 0)
+    out <- nlsLM(observed ~ (f0 - f_plateau) * exp(-k * Time) + f_plateau + k_background * Time,
                data = data, start = start, control = nls.lm.control(maxiter = 200))
     f0 <- coef(out)[1]
-    k <- coef(out)[2]
-    c <- coef(out)[3]
-    k_background <- coef(out)[4]
+    k <- coef(out)[2] #### k when signal is in fluorescence units
+    f_plateau <- coef(out)[3]  ## plateau in fluorescence units
+    k_background <- coef(out)[4]  ## k of bacground fluorescence decay (photobleaching)
     
-    data$predicted <- (f0 - c) * exp(-k * data$Time) + c + k_background * data$Time
-    data$signal <- (f0 - c) * exp(-k * data$Time) + c
-    data$background <- c + k_background * data$Time
-     data$k_background <- k_background
+    data$predicted <- (f0 - f_plateau) * exp(-k * data$Time) + f_plateau + k_background * data$Time
+    data$signal <- (f0 - f_plateau) * exp(-k * data$Time) + f_plateau
+    data$background <- f_plateau + k_background * data$Time
+    data$k_background <- k_background
   }
   
   if  (background_type == 'exponential') {
     #print(unique(data$condition))
-    #print(max(data$observed))
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 1, k_background = 0.0001)
-    out <- nlsLM(observed ~ (f0 - c) * (exp(-k * Time) + exp(-k_background * Time)) + c,
-               data = data, start = start, control = nls.lm.control(maxiter = 300))
-    f0 <- coef(out)[1]
-    k <- coef(out)[2]
-    c <- coef(out)[3]
-    k_background <- coef(out)[4]
-    
-    data$predicted <- (f0 - c) * (exp(-k * data$Time) + exp(-k_background * data$Time)) + c
-    data$signal <- (f0 - c) * (exp(-k * data$Time)) + c
-    data$background <- exp(-k_background * data$Time) + c
+    max.f <- max(data$observed, na.rm = T)
+    min.f <- min(data$observed, na.rm = T)
+    start <- list(span = (max.f - min.f), spanb = (max.f - min.f)/100, k = 0.01, 
+                  f_plateau = min.f, k_background = 0.0001)
+    out <- nlsLM(observed ~ span * exp(-k * Time) + spanb * exp(-k_background * Time) + f_plateau,
+               data = data, start = start, control = nls.lm.control(maxiter = 500))
+    span <- coef(out)[1]
+    spanb <- coef(out)[2]
+    k <- coef(out)[3]
+    f_plateau <- coef(out)[4]
+    k_background <- coef(out)[5]
+    f0 <- span + spanb + f_plateau
+    data$predicted <- span * exp(-k * data$Time) + spanb * exp(-k_background * data$Time) + f_plateau
+    data$signal <- (f0 - f_plateau) * (exp(-k * data$Time)) + f_plateau
+    data$background <- (f0 - f_plateau) * exp(-k_background * data$Time) + f_plateau
     data$k_background <- k_background
   }
-  #data$max.fluorescence <- data$signal[ data$Time == min(data$Time) ]
-  #data$min.fluorescence <- c
   
   if  (background_type == 'none') {
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0.1)
-    out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c,
+    #print(unique(data$condition))
+    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, f_plateau = 0)
+    out <- nlsLM(observed ~ (f0 - f_plateau) * exp(-k * Time),
                data = data, start = start, control = nls.lm.control(maxiter = 300))
     f0 <- coef(out)[1]
     k <- coef(out)[2]
-    c <- coef(out)[3]
+    f_plateau <- coef(out)[3]
 
-    data$predicted <- (f0 - c)* exp(-k * data$Time) + c
+    data$predicted <- (f0 - f_plateau) * exp(-k * data$Time)
+    data$signal <- (f0 - f_plateau) * (exp(-k * data$Time)) + f_plateau
   }
-  if  (background_type == 'cutoff') {
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0)
-    out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c,
-               data = data, start = start, control = nls.lm.control(maxiter = 200))
-    f0 <- coef(out)[1]
-    k <- coef(out)[2]
-    c <- coef(out)[3]
-
-    data$predicted <- (f0 - c)* exp(-k * data$Time) + c
-    cutoff_time_range <- c(data$cutoff_time - 20, data$cutoff_time + 20)
-    data$min.fluorescence <- min(data$predicted[findInterval(data$Time, cutoff_time_range) == 1])
-    data$max.fluorescence <- max(data$predicted)
-
-  }
-
+  
   data$f0 <- f0
   data$k <- k
-  data$c <- c
-  data$v0 = (f0 * k * exp(k * 0)) / (data$GEF_conc[1]*0.001)
+  data$f_plateau <- f_plateau
+  data$vf0 = (f0 * k * exp(k * 0)) / (GEF_conc*0.001)   ### initial rate in fluorescence units
   
+
+  data$v0 <- (c0 * k * exp(k * 0)) / (GEF_conc*0.001)   ## initial rate in concentration units
   return(data)
 }
 ```
@@ -105,7 +100,9 @@ plot_data <- function(data, background_type, units) {
   for (i in seq_along(conditions)) {
     data_to_plot <- data %>% filter(condition == conditions[i])
     plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) + geom_point() +
-      geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+      geom_line(aes(x = Time, y = predicted), color = "red") +
+      geom_line(aes(x = Time, y = signal), color = "green") +
+      geom_line(aes(x = Time, y = background), color = "blue") +
       ggtitle(conditions[i])
   }
   pdf(paste(Sys.Date(), background_type, units, 'data.pdf', sep= '_'), width = 12)
@@ -128,8 +125,9 @@ plot_data <- function(data, background_type, units) {
   pdf(paste(Sys.Date(), background_type, units, 'params.pdf', sep= '_'))
   hist(unique(data$f0), breaks = 100)
   hist(unique(data$k), breaks = 100)
-  hist(unique(data$c), breaks = 100)
-  hist(unique(data$v0), breaks = 100)
+  hist(unique(data$f_plateau), breaks = 100)
+  hist(unique(data$vf0), breaks = 100)
+  hist(unique(data$vf0), breaks = 100)
   if ( ! (background_type == 'none' | background_type == "cutoff")) {
     hist(unique(data$k_background), breaks = 100)
     print(ggplot(data, aes(x = conc, y = k_background, color = sample)) + geom_point())
@@ -159,15 +157,15 @@ plot_data <- function(data, background_type, units) {
 # Run data assuming photobleaching decay is exponential, first in fluorescence units, then in concentration units
 data.exp <- biotek.data
 data.exp <- data.exp %>%
-  group_by(condition) %>%
   mutate(observed = fluorescence) %>%
-  do(run_nls(., background_type = 'exponential', deadtime = 18))
-plot_data(data.exp, background_type = 'exponential', units = 'fluor')
+  group_by(condition, GEF_conc) %>%
+  do(run_nls(., background_type = 'linear', deadtime = 18))
+plot_data(data.exp, background_type = 'linear', units = 'fluor')
 data.exp <- data.exp %>% 
-  #mutate(observed = conc - conc*(max.fluorescence - signal)/(max.fluorescence - min.fluorescence)) %>%
-  mutate(observed = conc - conc*(f0 - signal)/(f0 - c)) %>% 
+  mutate(observed = conc - conc*(f0 - signal)/(f0 - f_plateau)) %>%
   do(run_nls(., background_type = 'none', deadtime = 0))
 plot_data(data.exp, background_type = 'exponential', units = 'conc')
+
 
 #MM.data <- data.exp %>%
  # group_by(sample) %>%
@@ -180,9 +178,9 @@ plot_data(data.exp, background_type = 'exponential', units = 'conc')
 # Run data assuming photobleaching decay is linear, first in fluorescence units, then in concentration units
 data.lin <- biotek.data
 data.lin <- data.lin %>%
-  group_by(condition) %>%
+  group_by(condition, conc) %>%
   mutate(observed = fluorescence) %>%
-  do(run_nls(., background_type = 'linear', deadtime = 20))
+  do(run_nls(., background_type = 'linear', deadtime = 20, c0 = conc))
 plot_data(data.exp, background_type = 'linear', units = 'fluor')
 data.exp <- data.exp %>% 
   mutate(observed = conc - conc*(max.fluorescence - signal)/(max.fluorescence - min.fluorescence)) %>%
