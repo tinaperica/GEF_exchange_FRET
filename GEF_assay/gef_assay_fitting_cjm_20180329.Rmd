@@ -6,6 +6,7 @@ output: html_notebook
 ```{r, message=FALSE, warning=FALSE}
 # import libraries
 library(tidyverse)
+library(lubridate)
 library(minpack.lm)
 ```
 
@@ -16,9 +17,11 @@ biotek.data <- read_delim(inputfilename, delim = "\t", col_names = T)
 ```
 
 ```{r}
-run_nls <- function(data, background_type, deadtime) {
+run_nls <- function(data, background_type, deadtime, debug=FALSE) {
   
-  # print(unique(data$condition))
+  #### debug mode: if debug is TRUE, print out condition being fit 
+  if (debug) {print(unique(data$condition))}
+  
   #### add the (estimated) dead time
   if (deadtime > 0) {
     deadtime_timepoints <- seq(-1*(deadtime), -5, 5)
@@ -27,54 +30,128 @@ run_nls <- function(data, background_type, deadtime) {
     timepoints_to_append$observed <- NA
     data <- rbind(data, timepoints_to_append)
   }
+  
+  #### linear fit for background
   if (background_type == 'linear') {
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0, k_background = 0)
-    out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c + k_background * Time,
-               data = data, start = start, control = nls.lm.control(maxiter = 200))
+    
+    #### set starting values, upper bounds, and lower bounds for parameters (in order, f0, k, c, k_background)
+    start <- list(f0 = max(data$observed, na.rm = T),
+                  k = 0.001,
+                  c = median(data$observed, na.rm = T),
+                  k_background = 1e-5)
+    
+    upper <- c(max(data$observed, na.rm = T),
+               1.0,
+               median(data$observed, na.rm = T), 
+               Inf) 
+    
+    lower <- c(median(data$observed, na.rm = T),
+               1e-10,
+               min(data$observed, na.rm = T),
+               -Inf)
+    
+    #### run non-linear least-squares regression with LM algorithm. format: out <- nlsLM(y ~ f(x))
+    out <- nlsLM(observed ~ (f0 - (c-k_background*Time)) * exp(-k * Time) + (c-k_background*Time),
+                 data = data, start = start, upper = upper, lower = lower, control = nls.lm.control(maxiter = 300))
+    
+    #### save parameters
     f0 <- coef(out)[1]
     k <- coef(out)[2]
     c <- coef(out)[3]
     k_background <- coef(out)[4]
     
-    data$predicted <- (f0 - c) * exp(-k * data$Time) + c + k_background * data$Time
-    data$signal <- (f0 - c) * exp(-k * data$Time) + c
-    data$background <- c + k_background * data$Time
-     data$k_background <- k_background
+    #### calculate ideal curves for overall fit, true exchange signal, and background
+    data$predicted <- (f0 - (c-k_background*data$Time)) * exp(-k * data$Time) + (c-k_background*data$Time)
+    data$exchange <- (f0 - c) * exp(-k * data$Time) + c
+    data$background <- c - k_background * data$Time
   }
   
-  if  (background_type == 'exponential') {
-    #print(unique(data$condition))
-    #print(max(data$observed))
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 1, k_background = 0.0001)
-    out <- nlsLM(observed ~ (f0 - c) * (exp(-k * Time) + exp(-k_background * Time)) + c,
-               data = data, start = start, control = nls.lm.control(maxiter = 300))
+  #### exponential fit for background
+  if (background_type == 'exponential') {
+
+    #### set starting values, upper bounds, and lower bounds for parameters (in order, f0, k, c, k_background)
+    start <- list(f0 = max(data$observed, na.rm = T),
+                  k = 0.001,
+                  c = median(data$observed, na.rm = T),
+                  k_background = 1e-5)
+    
+    upper <- c(max(data$observed, na.rm = T),
+               1.0,
+               median(data$observed, na.rm = T), 
+               1e-3) 
+    
+    lower <- c(median(data$observed, na.rm = T),
+               1e-8,
+               min(data$observed, na.rm = T),
+               1e-8)
+      
+    #### run non-linear least-squares regression with LM algorithm. format: out <- nlsLM(y ~ f(x))
+    out <- nlsLM(observed ~ (f0 - c * exp(-k_background * Time)) * exp(-k * Time) + c * exp(-k_background * Time),
+               data = data, start = start, upper = upper, lower = lower, control = nls.lm.control(maxiter = 300))
+    
+    #### save optimal parameters
     f0 <- coef(out)[1]
     k <- coef(out)[2]
     c <- coef(out)[3]
     k_background <- coef(out)[4]
     
-    data$predicted <- (f0 - c) * (exp(-k * data$Time) + exp(-k_background * data$Time)) + c
-    data$signal <- (f0 - c) * (exp(-k * data$Time)) + c
-    data$background <- exp(-k_background * data$Time) + c
+    #### calculate ideal curves for overall fit, true exchange signal, and background, save
+    data$predicted <- (f0 - c * exp(-k_background * data$Time)) * exp(-k * data$Time) + c * exp(-k_background * data$Time)
+    data$exchange <- (f0 - c) * (exp(-k * data$Time)) + c
+    data$background <- c * exp(-k_background * data$Time)
     data$k_background <- k_background
   }
-  #data$max.fluorescence <- data$signal[ data$Time == min(data$Time) ]
-  #data$min.fluorescence <- c
   
+  #### ignore background when fitting
   if  (background_type == 'none') {
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0.1)
+
+    #### set starting values, upper bounds, and lower bounds for parameters (in order, f0, k, c, k_background)
+    start <- list(f0 = max(data$observed, na.rm = T),
+                  k = 0.001,
+                  c = median(data$observed, na.rm = T))
+    
+    upper <- c(max(data$observed, na.rm = T),
+               1.0,
+               median(data$observed, na.rm = T)) 
+    
+    lower <- c(median(data$observed, na.rm = T),
+               1e-8,
+               min(data$observed, na.rm = T))
+    
+    #### run non-linear least-squares regression with LM algorithm. format: out <- nlsLM(y ~ f(x))
     out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c,
-               data = data, start = start, control = nls.lm.control(maxiter = 300))
+               data = data, start = start, upper = upper, lower = lower, control = nls.lm.control(maxiter = 300))
+    
+    #### save optimal parameters
     f0 <- coef(out)[1]
     k <- coef(out)[2]
     c <- coef(out)[3]
-
-    data$predicted <- (f0 - c)* exp(-k * data$Time) + c
+    
+    #### calculate ideal curves for overall fit, and true exchange signal (ignore background)
+    data$predicted <- (f0 - c) * (exp(-k * data$Time)) + c
+    data$exchange <- (f0 - c) * (exp(-k * data$Time)) + c
+    data$background <- 0
   }
-  if  (background_type == 'cutoff') {
-    start <- list(f0 = max(data$observed, na.rm = T), k = 0.01, c = 0)
+  
+  #### ignore background when fitting, use cutoff points
+  if (background_type == 'cutoff') {
+    
+    #### set starting values, upper bounds, and lower bounds for parameters (in order, f0, k, c, k_background)
+    start <- list(f0 = max(data$observed, na.rm = T),
+                  k = 0.001,
+                  c = median(data$observed, na.rm = T))
+    
+    upper <- c(max(data$observed, na.rm = T),
+               1.0,
+               median(data$observed, na.rm = T)) 
+    
+    lower <- c(median(data$observed, na.rm = T),
+               1e-8,
+               min(data$observed, na.rm = T))
+    
+    #### run non-linear least-squares regression with LM algorithm. format: out <- nlsLM(y ~ f(x))
     out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c,
-               data = data, start = start, control = nls.lm.control(maxiter = 200))
+               data = data, start = start, upper = upper, lower = lower, control = nls.lm.control(maxiter = 300))
     f0 <- coef(out)[1]
     k <- coef(out)[2]
     c <- coef(out)[3]
@@ -83,12 +160,28 @@ run_nls <- function(data, background_type, deadtime) {
     cutoff_time_range <- c(data$cutoff_time - 20, data$cutoff_time + 20)
     data$min.fluorescence <- min(data$predicted[findInterval(data$Time, cutoff_time_range) == 1])
     data$max.fluorescence <- max(data$predicted)
-
+    
+    ####run non-linear least-squares regression with LM algorithm. format: out <- nlsLM(y ~ f(x))
+    out <- nlsLM(observed ~ (f0 - c) * exp(-k * Time) + c,
+               data = data, start = start, upper = upper, lower = lower, control = nls.lm.control(maxiter = 300))
+    
+    #### save optimal parameters
+    f0 <- coef(out)[1]
+    k <- coef(out)[2]
+    c <- coef(out)[3]
+    
+    #### calculate ideal curves for overall fit, and true exchange signal (ignore background)
+    data$predicted <- (f0 - c) * (exp(-k * data$Time)) + c
+    data$exchange <- (f0 - c) * (exp(-k * data$Time)) + c
+    data$background <- 0
   }
-
+  
+  #### save optimal parameters in the data table
   data$f0 <- f0
   data$k <- k
   data$c <- c
+  if (background_type %in% c('linear', 'exponential')) {data$k_background <- k_background}
+  else {data$k_background <- 0.0}
   data$v0 = (f0 * k * exp(k * 0)) / (data$GEF_conc[1]*0.001)
   
   return(data)
@@ -98,47 +191,64 @@ run_nls <- function(data, background_type, deadtime) {
 ```{r}
 plot_data <- function(data, background_type, units) {
   
-  sink('/dev/null')
-  # plot data with fitted curves
+  #### Call this to get rid of the "[[1]] [[2]] [[3]]..." printing during pdf plotting. note that it clears errors, must be removed when debugging
+  sink('/dev/null')  
+  
+  #### set date, for filenaming purposes
+  today = gsub('-', '', today(tzone="US/Pacific"))
+  
+  #### plot data with fitted curves
   plots <- list()
   conditions = unique(data$condition)
-  for (i in seq_along(conditions)) {
+  for (i in seq_along(1:length(conditions))) {
     data_to_plot <- data %>% filter(condition == conditions[i])
-    plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) + geom_point() +
-      geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
-      ggtitle(conditions[i])
-  }
-  pdf(paste(Sys.Date(), background_type, units, 'data.pdf', sep= '_'), width = 12)
+    
+    if (background_type %in% c('linear', 'exponential')) {
+      plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) + geom_point(color = "black") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = background), color = "blue") +
+        ggtitle(conditions[i])
+    } else {
+      plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) + geom_point(color = "black") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+        ggtitle(conditions[i])
+    }
+  pdf(paste(today, background_type, units, 'data.pdf', sep= '_'))
   print(plots)
   dev.off()
+  }
 
-  # plot michaelis-menten points for exp and lin decay
+  #### make michaelis-menten plot of v0 vs. conc
   plots <- list()
   samples = unique(data$sample)
-  for (i in seq_along(samples)) {
+  for (i in seq_along(1:length(samples))) {
     data_to_plot <- data %>% filter(sample == samples[i])
-    plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = conc, y = v0, color = as.character(date))) + geom_point() +
+    plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = conc, y = v0, color=as.character(date))) + geom_point() +
       ggtitle(samples[i])
+      # + geom_text(aes(label=condition),hjust=0, vjust=0)  # use this to label each point on the plot (useful for finding outliers)
   }
-  pdf(paste(Sys.Date(), background_type, units, 'MM.pdf', sep = '_'), width = 12)
+  pdf(paste(today, background_type, units, 'MM.pdf', sep= '_'))
   print(plots)
   dev.off()
 
-  # plot parameters for each fit
-  pdf(paste(Sys.Date(), background_type, units, 'params.pdf', sep= '_'))
-  hist(unique(data$f0), breaks = 100)
-  hist(unique(data$k), breaks = 100)
-  hist(unique(data$c), breaks = 100)
-  hist(unique(data$v0), breaks = 100)
-  if ( ! (background_type == 'none' | background_type == "cutoff")) {
-    hist(unique(data$k_background), breaks = 100)
-    print(ggplot(data, aes(x = conc, y = k_background, color = sample)) + geom_point())
+  #### plot histograms showing distribution of parameters across all fits
+  pdf(paste(today, background_type, units, 'params.pdf', sep= '_'))
+  hist(unique(data$f0), breaks=length(unique(data$condition)))
+  hist(unique(data$k), breaks=length(unique(data$condition)))
+  hist(unique(data$c), breaks=length(unique(data$condition)))
+  if (background_type != 'none') {
+    hist(unique(data$k_background), breaks=length(unique(data$condition)))
+    print(ggplot(data, aes(x = conc, y = k_background, color=sample)) + geom_point())
   }
+  hist(unique(data$v0), breaks=100)
   dev.off()
 
-  #return(data)
+  return(data)
 }
 ```
+
 ```{r}
 # fit_MM <- function(data) {
 #   #function(pars, xx) (conc * pars$Vmax) / (pars$Km + conc)
@@ -156,24 +266,34 @@ plot_data <- function(data, background_type, units) {
 ```
 
 ```{r}
-# Run data assuming photobleaching decay is exponential, first in fluorescence units, then in concentration units
+#### Make a copy of data to be transformed
 data.exp <- biotek.data
+
+#### Fit data assuming photobleaching decay is exponential, with observations in fluorescence units
 data.exp <- data.exp %>%
   group_by(condition) %>%
   mutate(observed = fluorescence) %>%
-  do(run_nls(., background_type = 'exponential', deadtime = 18))
-plot_data(data.exp, background_type = 'exponential', units = 'fluor')
-data.exp <- data.exp %>% 
-  #mutate(observed = conc - conc*(max.fluorescence - signal)/(max.fluorescence - min.fluorescence)) %>%
-  mutate(observed = conc - conc*(f0 - signal)/(f0 - c)) %>% 
-  do(run_nls(., background_type = 'none', deadtime = 0))
-plot_data(data.exp, background_type = 'exponential', units = 'conc')
+  do(run_nls(., background_type = 'exponential', deadtime = 18)) %>%
+  plot_data(data.exp, background_type = 'exponential', units = 'fluor')
 
-#MM.data <- data.exp %>%
- # group_by(sample) %>%
-  #select(v0, conc) %>%
-  #unique() %>%
-  #do(fit_MM(.))
+#### save data table with fits in fluorescent units
+data.exp.fluor <- data.exp
+
+#### Fit data assuming photobleaching decay is exponential, with observations in concentration units
+data.exp <- data.exp %>%
+  mutate(observed = conc - conc*(f0 - observed)/(f0 - c)) %>%
+  do(run_nls(., background_type = 'none', deadtime = 18)) %>%
+  plot_data(data.exp, background_type = 'none', units = 'conc')
+
+#### save data table with fits in concentration units
+data.exp.conc <- data.exp
+
+#### FIX fit michaelis-menten curve to v0 in concentration units
+# MM.data <- data.exp %>%
+#   group_by(sample) %>%
+#   select(v0, conc) %>%
+#   unique() %>%
+#   do(fit_MM(.))
 ```
 
 ```{r}
@@ -185,7 +305,7 @@ data.lin <- data.lin %>%
   do(run_nls(., background_type = 'linear', deadtime = 20))
 plot_data(data.exp, background_type = 'linear', units = 'fluor')
 data.exp <- data.exp %>% 
-  mutate(observed = conc - conc*(max.fluorescence - signal)/(max.fluorescence - min.fluorescence)) %>%
+  mutate(observed = conc - conc*(max.fluorescence - exchange)/(max.fluorescence - min.fluorescence)) %>%
   do(run_nls(., background_type = 'none', deadtime = 0))
 plot_data(data.exp, background_type = 'linear', units = 'conc')
 ```
@@ -204,3 +324,4 @@ data.nodecay <- data.nodecay %>%
   do(run_nls(., background_type = 'none', deadtime = 0)) %>%
   plot_data(background_type = 'none', units = 'conc')
 ```
+
