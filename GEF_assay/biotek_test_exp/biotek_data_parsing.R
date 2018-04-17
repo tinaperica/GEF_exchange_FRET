@@ -29,7 +29,7 @@ read_and_gather <- function(file) {
 (files <- dir("GEF_assay/biotek_test_exp/data/good_data", pattern = ".txt", full.names = T))
 outfile <- "GEF_assay/biotek_test_exp/data/good_data_parsed.txt"
 ### load the index file (has conditions per well)
-(index <- as.tibble(read_delim("GEF_assay/biotek_test_exp/good_data_index.txt", col_names = T, delim = "\t")))
+(index <- as.tibble(read_delim("GEF_assay/biotek_test_exp/good_data_index_cleaned.txt", col_names = T, delim = "\t")))
 ### read in the data files, join them with the info from the index file and make them tidy
 ( dataset <- do.call("bind_rows", lapply(files, FUN = read_and_gather)) )
 ##### add code to remove bad data (based on a file with a list of data points to remove)
@@ -38,6 +38,9 @@ outfile <- "GEF_assay/biotek_test_exp/data/good_data_parsed.txt"
 ###############################
 dataset_to_save <- mutate(dataset, "condition" = paste(date, sample, well, conc, sep = "-")) %>%
   mutate("row" = str_sub(well, 1, 1), "column" = str_sub(well, 2))
+
+write_tsv(dataset_to_save, outfile, na = "NA", append = FALSE)
+
 dataset_to_plot <- filter(dataset_to_save, Time < 1000) %>%
   group_by(condition) %>%
   mutate("norm_fluorescence" = 1 - ((quantile(fluorescence, prob = 0.999, na.rm = T) - fluorescence) / 
@@ -50,18 +53,51 @@ ggplot(dataset_to_plot, aes(x = Time, y = norm_fluorescence, color = sample)) +
   facet_wrap(~ conc) + geom_point(stroke = 0, shape = 16, size = 0.8, show.legend = T)
 ggsave("GEF_assay/biotek_test_exp/good_data_norm_fluorescence.pdf",  width = 15, height = 10, units = "in")
 
-filter(dataset_to_plot, conc > 0.5) %>%
-  arrange(conc) %>%
-  ggplot(aes(x = Time, y = norm_fluorescence, color = conc)) +
+dataset_to_plot %>%
+  arrange(as.numeric(conc)) %>%
+  ggplot(aes(x = Time, y = norm_fluorescence, color = as.numeric(conc))) +
     facet_wrap(~ sample) + geom_point(stroke = 0, shape = 16, size = 0.8, show.legend = T) +
   scale_colour_gradientn(colours = terrain.colors(40))
 ggsave("GEF_assay/biotek_test_exp/by_sample_good_data_norm_fluorescence.pdf",  width = 15, height = 10, units = "in")
 
+plots <- list()
+exp_dates <- dataset_to_plot %>% pull(date) %>% unique()
+for (i in seq_along(exp_dates)) {
+  plots[[i]] <- dataset_to_plot %>% 
+    filter(date == exp_dates[i]) %>%
+    ggplot(aes(x = Time, y = norm_fluorescence, color = as.numeric(conc))) + 
+    facet_wrap(~ sample) + geom_point(stroke = 0, shape = 16, size = 1, show.legend = T) +
+    ggtitle(exp_dates[i])
+}
+pdf("GEF_assay/biotek_test_exp/by_date_good_data_norm_fluorescence.pdf", width = 10, height = 5)
+print(plots)
+dev.off()
 
-#ggplot(dataset_to_plot, aes(x = Time, y = norm_fluorescence, color = condition)) + 
- #   facet_wrap(~ sample) +
-  #  geom_point(show.legend = T)
-write_tsv(dataset_to_save, outfile, na = "NA", append = FALSE)
+
+plots <- list()
+exp_dates <- dataset_to_plot %>% 
+  pull(date) %>% unique()
+samples <- dataset_to_plot %>% 
+  pull(sample) %>% unique()
+plot_count <- 1
+for (i in seq_along(exp_dates)) {
+  for (j in seq_along(samples)) {
+    temp <- dataset_to_plot %>% 
+    filter(date == exp_dates[i], sample == samples[j])
+    if (nrow(temp) > 0) {
+      concentrations <- temp %>% arrange(conc) %>% pull(conc)
+      temp <- temp %>% mutate("conc" = factor(conc, concentrations))
+      plots[[plot_count]] <- ggplot(temp, aes(x = Time, y = norm_fluorescence, color = condition)) + 
+        geom_point(show.legend = T) +
+        ggtitle(exp_dates[i])
+      plot_count <- plot_count + 1
+    }
+  }
+}
+pdf("GEF_assay/biotek_test_exp/by_date_and_sample_good_data_norm_fluorescence.pdf", width = 15, height = 9)
+print(plots)
+dev.off()
+
 # dataset_to_save <-  select(dataset_to_save, date, Time, row, column, sample, conc, GEF_conc, fluorescence, cutoff_time)
 # #write.table(dataset_to_save, file = "GEF_assay/data/20180131_biotek_data.txt", quote = F, row.names = F, sep = "\t", col.names = F)
 # #### compare the reproducibility to the Tecan experiment
