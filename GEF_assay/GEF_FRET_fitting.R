@@ -26,47 +26,52 @@ run_nls <- function(data, deadtime, debug = FALSE) {
     timepoints_to_append$observed <- NA
     data <- rbind(data, timepoints_to_append)
   }
-  start <- list(span1 = max(data$observed, na.rm = T) - min(data$observed, na.rm = T),
-                f0 = max(data$observed, na.rm = T),
-                f_plateau = 0.7 * max(data$observed, na.rm = T),
+  start <- list(f0 = max(data$observed, na.rm = T),
+                f_plateau = 0.5 * max(data$observed, na.rm = T),
+                span1 = max(data$observed, na.rm = T) - min(data$observed, na.rm = T),
                 k = 0.001,
-                k_background = 3e-5)
-  out <- nlsLM(observed ~ span1 * exp(-k * Time) + (f0 - span1 - f_plateau) * exp(-k_background * Time) + f_plateau,
-                      data = data, start = start, control = nls.lm.control(maxiter = 300))
+                k_background = 3e-6)
+  lower <- c(0.1 * max(data$observed, na.rm = T),
+             0,
+             0,
+             1e-5, 
+             0)
+  out <- nlsLM(observed ~ span1 * exp(-k * Time) + (f0 - f_plateau - span1) * exp(-k_background * Time) + f_plateau,
+                      data = data, start = start, 
+                control = nls.lm.control(maxiter = 300))
   #out <- nlsLM(observed ~ (f0 - f_plateau * exp(-k_background * Time)) * exp(-k * Time) + 
    #              f_plateau * exp(-k_background * Time) + 5e5 * (k - 3e-5),
     #           data = data, start = start, control = nls.lm.control(maxiter = 300))
   
   #### save optimal parameters
-  span1 <- coef(out)[1]
-  f0 <- coef(out)[2]
-  f_plateau <- coef(out)[3]
+  f0 <- coef(out)[1]
+  f_plateau <- coef(out)[2]
+  span1 <- coef(out)[3]
   k <- coef(out)[4]
   k_background <- coef(out)[5]
-  span2 <- f0 - span1 - f_plateau
-  
-  if (k_background < 0) {
-    start <- list(f0 = max(data$observed, na.rm = T),
-                  k = 0.001,
-                  #c = median(data$observed, na.rm = T),
-                  f_plateau = 0.7 * max(data$observed, na.rm = T)
-                  )
-    out <- nlsLM(observed ~ (f0 - f_plateau) * exp(-k * Time) + f_plateau,
-                 data = data, start = start, control = nls.lm.control(maxiter = 300))
-    f0 <- coef(out)[1]
-    k <- coef(out)[2]
-    f_plateau <- coef(out)[3]
-    k_background <- 0
-    span1 <- f0 - f_plateau
-    span2 <- 0
-  }
+
+  # if (k_background < 0) {
+  #   start <- list(f0 = max(data$observed, na.rm = T),
+  #                 k = 0.001,
+  #                 #c = median(data$observed, na.rm = T),
+  #                 f_plateau = 0.7 * max(data$observed, na.rm = T)
+  #                 )
+  #   out <- nlsLM(observed ~ (f0 - f_plateau) * exp(-k * Time) + f_plateau,
+  #                data = data, start = start, control = nls.lm.control(maxiter = 300))
+  #   f0 <- coef(out)[1]
+  #   k <- coef(out)[2]
+  #   f_plateau <- coef(out)[3]
+  #   k_background <- 0
+  #   span1 <- f0 - f_plateau
+  #   span2 <- 0
+  # }
   #### calculate ideal curves for overall fit, true exchange signal, and background, save
   #data$predicted <- (f0 - f_plateau * exp(-k_background * data$Time)) * exp(-k * data$Time) + f_plateau * exp(-k_background * data$Time)
   #data$exchange <- (f0 - f_plateau) * (exp(-k * data$Time)) + f_plateau
   #data$background <- f_plateau * exp(-k_background * data$Time)
-  data$predicted <- span1 * exp(-k * data$Time) +  span2* exp(-k_background * data$Time) + f_plateau
+  data$predicted <- span1 * exp(-k * data$Time) +  (f0 - f_plateau - span1) * exp(-k_background * data$Time) + f_plateau
   data$exchange <- span1 * (exp(-k * data$Time)) + f_plateau
-  data$background <-  span2 * exp(-k_background * data$Time) + f_plateau
+  data$background <-  (f0 - f_plateau - span1) * exp(-k_background * data$Time) + f_plateau
   data$k_background <- k_background
   
   #### save optimal parameters in the data table
@@ -75,10 +80,15 @@ run_nls <- function(data, deadtime, debug = FALSE) {
   data$f_plateau <- f_plateau
   data$k_background <- k_background
   data$span1 <- span1
-  data$span2 <- span2
   ### calculate the initial rate
-  data$vf0 = (f0 * k * exp(k * 0)) / (GEF_conc*0.001)   ### initial rate in fluorescence units
-  data$v0 <- (c0 * k * exp(k * 0)) / (GEF_conc*0.001)   ## initial rate in concentration units  
+  data$vf0 = (span1 * k * exp(k * 0)) / (GEF_conc*0.001)   ### initial rate in fluorescence units
+  ### effective concentration
+  ## c0/c = f0/span1
+  #data$v0 <- (c0 * span1)/f0  * k *exp(k * 0) / (GEF_conc*0.001)   ## initial rate in concentration units 
+  
+  #data$v0 <- c0  * k *exp(k * 0) / (GEF_conc*0.001)   ## initial rate in concentration units 
+  #data$v0 = ( ((span1 - f_plateau)/span1) * c0 * k ) / (GEF_conc*0.001)   ### initial rate in concentration units
+  
   data$f_signal_change <- (f0 - f_plateau) / f0 
   return(data)
 }
@@ -86,7 +96,7 @@ run_nls <- function(data, deadtime, debug = FALSE) {
 plot_data <- function(data, debug = FALSE) {
   
   #### Call this to get rid of the "[[1]] [[2]] [[3]]..." printing during pdf plotting. note that it clears errors, must be removed when debugging
-  sink('/dev/null')  
+  #sink('/dev/null')  
   
   #### set date, for filenaming purposes
   today = gsub('-', '', today(tzone="US/Pacific"))
@@ -122,14 +132,14 @@ plot_data <- function(data, debug = FALSE) {
   if (debug) {
     pdf(paste(today, 'params.pdf', sep = '_'))
     #print(ggplot(data, aes(x = conc, y = f0, color = sample)) + geom_point())
-    print(ggplot(data, aes(x = conc, y = k, color = sample)) + geom_point())
-    #print(ggplot(data, aes(x = conc, y = f_plateau, color = sample)) + geom_point())
+    print(ggplot(data, aes(x = conc, y = k, color = as.character(date))) + geom_point())
+    print(ggplot(data, aes(x = conc, y = f_plateau, color = as.character(date))) + geom_point())
     #print(ggplot(data, aes(x = conc, y = f_signal_change, color = sample)) + geom_point())
-    print(ggplot(data, aes(x = conc, y = k_background, color = sample)) + geom_point())
-    print(ggplot(data, aes(x = conc, y = span1, color = sample)) + geom_point())
-    print(ggplot(data, aes(x = conc, y = span2, color = sample)) + geom_point())
-    #print(ggplot(data, aes(x = conc, y = v0, color = sample)) + geom_point())
-    #print(ggplot(data, aes(x = conc, y = vf0, color = sample)) + geom_point())
+    print(ggplot(data, aes(x = conc, y = k_background, color = as.character(date))) + geom_point())
+    print(ggplot(data, aes(x = conc, y = span1, color = as.character(date))) + geom_point())
+    #print(ggplot(data, aes(x = conc, y = span2, color = sample)) + geom_point())
+    print(ggplot(data, aes(x = conc, y = v0, color = as.character(date))) + geom_point())
+    print(ggplot(data, aes(x = conc, y = vf0, color = sample)) + geom_point())
     dev.off()
   }
   
@@ -154,14 +164,20 @@ data.exp <- biotek.data
 
 #### Fit data assuming photobleaching decay is exponential, with observations in fluorescence units
 data.exp <- data.exp %>%
+  filter(sample == "PE1_WT") %>%
   group_by(condition) %>%
   mutate(observed = fluorescence) %>%
-  do(run_nls(., deadtime = 18, debug = T))
+  do(run_nls(., deadtime = 0, debug = T))
+
 fit.parameters <- data.exp %>% 
-  select(sample, date, conc, condition, f0, k, k_background, f_plateau, vf0, v0, f_signal_change) %>% 
+  select(sample, date, conc, condition, span1, f0, k, k_background, f_plateau, vf0, v0, f_signal_change) %>% 
   unique() %>%
   arrange(sample, conc)
-ggplot(fit.parameters, aes(conc, v0, color = sample)) + geom_point()
+fit.parameters %>% filter(v0 < 10 & v0 > 0) %>%
+ggplot(., aes(conc, v0, color = as.character(sample))) + geom_point()
+
+
+#ggsave("~/Desktop/temp.pdf")
 
 data.exp <- plot_data(data.exp, debug = T)
 
@@ -195,3 +211,6 @@ for (samp in samples) {
 
 ggplot(MM.data, mapping = aes(x = conc, y = v0, color = sample)) + geom_point() + geom_line(aes(x = conc, y = predicted_v0))
 
+Km_kcat_df <- MM.data %>%
+  select(sample, kcat, Km) %>%
+  unique()
