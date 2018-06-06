@@ -76,29 +76,27 @@ run_nls <- function(data, background_type, deadtime, debug = FALSE) {
 
     #### set starting values, upper bounds, and lower bounds for parameters (in order, f0, k, c, k_background)
     start <- list(f0 = max(data$observed, na.rm = T),
-                  k = 0.001,
-                  #c = median(data$observed, na.rm = T),
-                  f_plateau = 0.5 * max(data$observed, na.rm = T),
+                  f_plateau = 0.6*max(data$observed, na.rm = T),
+                  f_background = min(data$observed, na.rm = T),
+                  k = 5e-3,
                   k_background = 3e-5)
     
-    # upper <- c(2 * max(data$observed, na.rm = T),
-    #            0.5,
-    #            #median(data$observed, na.rm = T), 
-    #            0.8 * (max(data$observed, na.rm = T)),
-    #            1e-3) 
-    # 
-    # lower <- c(0.8 * max(data$observed, na.rm = T),
-    #            1e-6,
-    #            0.5 * min(data$observed, na.rm = T),
-    #            0)
+    upper <- c(2 * max(data$observed, na.rm = T),
+               0.8 * max(data$observed, na.rm = T),
+               2 * min(data$observed, na.rm = T),
+               1e-1,
+               1e-3)
+
+    lower <- c(0.8 * max(data$observed, na.rm = T),
+               0.3 * max(data$observed, na.rm = T),
+               0.5 * min(data$observed, na.rm = T),
+               1e-5,
+               1e-7)
       
     #### run non-linear least-squares regression with LM algorithm. format: out <- nlsLM(y ~ f(x))
-    # out <- nlsLM(observed ~ (f0 - f_plateau * exp(-k_background * Time)) * exp(-k * Time) + f_plateau * exp(-k_background * Time) + 1e3 * ((f0 - f_plateau)/f0 - 0.3) + 1e3 * (k - 0.1),
-    #            data = data, start = start, control = nls.lm.control(maxiter = 300))
-     out <- nlsLM(observed ~ (f0 - f_plateau * exp(-k_background * Time)) * exp(-k * Time) + f_plateau * exp(-k_background * Time),
-               data = data, start = start, control = nls.lm.control(maxiter = 300))
-    #out <- nlsLM(observed ~ (f0 - f_plateau * exp(-3e-5 * Time)) * exp(-k * Time) + f_plateau * exp(-3e-5 * Time) + 1e3 * ((f0 - f_plateau)/f0 - 0.3),
-     #         data = data, start = start, control = nls.lm.control(maxiter = 300))
+
+     out <- nlsLM(observed ~ (f0 - f_plateau) * exp(-k * Time) + (f_plateau - f_background) * exp(-k_background * Time) + f_background, data = data, start = start, control = nls.lm.control(maxiter = 300))
+    
     #### save optimal parameters
     f0 <- coef(out)[1]
     k <- coef(out)[2]
