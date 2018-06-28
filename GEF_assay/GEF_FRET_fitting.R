@@ -3,6 +3,8 @@ library(tidyverse)
 library(lubridate)
 library(minpack.lm)
 
+remove(list = ls())
+
 run_nls <- function(data, deadtime, debug = FALSE) {
   
   c0 <- data$conc[1]
@@ -13,9 +15,9 @@ run_nls <- function(data, deadtime, debug = FALSE) {
 
   start <- list(f_plateau = min(data$observed, na.rm = T),
                 span1 = max(data$observed, na.rm = T) - min(data$observed, na.rm = T),
-                span2 = 0.1*(max(data$observed, na.rm = T) - min(data$observed, na.rm = T)),
-                k = 5e-3,
-                k_background = 0)
+                span2 = 0.2*(max(data$observed, na.rm = T) - min(data$observed, na.rm = T)),
+                k = 7e-3,
+                k_background = 1e-4)
   lower <- c(min(data$observed, na.rm = T),
              0.0,
              0.0,
@@ -23,10 +25,18 @@ run_nls <- function(data, deadtime, debug = FALSE) {
              0.0)
   upper <- c(max(data$observed, na.rm = T),
              max(data$observed, na.rm = T),
-             max(data$observed, na.rm = T),
+             0.4*max(data$observed, na.rm = T),
              1.0,
              1.0)
   
+  if (data$sample[1] == 'PE4_R108L') {
+      start <- list(f_plateau = min(data$observed, na.rm = T),
+                span1 = max(data$observed, na.rm = T) - min(data$observed, na.rm = T),
+                span2 = 0.2*(max(data$observed, na.rm = T) - min(data$observed, na.rm = T)),
+                k = 1e-3,
+                k_background = 1e-4)
+  }
+
   out <- nlsLM(observed ~ span1 * exp(-k * (Time+deadtime)) - span2 * (1 - exp(-k_background * (Time+deadtime))) + f_plateau,
                data = data,
                start = start,
@@ -80,9 +90,13 @@ fit_conversion_factor <- function(data) {
 fit_MM <- function(data) {
   data_to_fit <- data %>% filter(Time == 0)
   start <- list(Vmax = 5, Km = 2)
+  lower <- c(0.0, 1e-12)
+  upper <- c(100, 1e1  )
   out <- nlsLM(v0 ~ (conc * Vmax) / (Km + conc),
                data = data_to_fit,
                start = start,
+               lower = lower,
+               upper = upper,
                control = nls.lm.control(maxiter = 200))
   Vmax <- coef(out)[1]
   Km <- coef(out)[2]
@@ -104,7 +118,7 @@ plot_raw_data <- function(data, by_sample = FALSE, output = getwd()) {
         conditions = unique(data_mutant$condition)
         for (i in seq_along(conditions)) {
           data_to_plot <- data_mutant %>% filter(condition == conditions[i]) 
-          plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
+          plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = fluorescence)) +
             geom_point(color = "black") +
             ggtitle(conditions[i])
         }
@@ -141,7 +155,7 @@ plot_fits <- function(data, by_sample = FALSE, output = getwd()) {
           plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
             geom_point(color = "black") +
             geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
-            geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+            # geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
             ggtitle(conditions[i])
         }
         pdf(paste0(output, paste(samples[j], 'fits.pdf', sep = '_')))
@@ -156,7 +170,7 @@ plot_fits <- function(data, by_sample = FALSE, output = getwd()) {
       plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
         geom_point(color = "black") +
         geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
-        geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+        # geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
         ggtitle(conditions[i])
     }
     pdf(paste0(output, 'fits.pdf'))
@@ -213,11 +227,74 @@ plot_MM <- function(data, output = getwd()) {
     plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = conc, y = v0, color = as.character(date))) + 
       geom_point() + 
       geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
-      ggtitle(paste(samples[i], paste("Km:", data_to_plot$Km[1], sep = " "), paste("kcat:", data_to_plot$kcat[1], sep = " "), sep = "\n"))
+      ggtitle(paste(samples[i], paste("Km:", round(data_to_plot$Km[1],2), sep = " "), paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "), sep = "\n"))
   }
   pdf(paste0(output, 'MM.pdf'))
   print(plots)
   dev.off()
+}
+
+plot_MM_bins <- function(data, output = getwd()) {
+  
+  plots <- list()
+  samples = unique(data$sample)
+  for (i in seq_along(samples)) {
+    
+    data_to_plot <- data %>%
+      filter(sample == samples[i]) %>%
+      filter(Time == 0)
+    
+   data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(mean_v0 = mean(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(sd_v0 = sd(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    plots[[i]] <- ggplot(data_to_plot, aes(x = conc, y = mean_v0)) +
+      geom_point() + 
+      geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
+      ggtitle(paste(samples[i],
+                paste("Km:", round(data_to_plot$Km[1],2), sep = " "),
+                paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "),
+              sep = "\n"))
+  }
+  pdf(paste0(output, 'MM_bins.pdf'))
+  print(plots)
+  dev.off()
+  
+  for (i in seq_along(samples)) {
+    
+    data_to_plot <- data %>%
+      filter(sample == samples[i]) %>%
+      filter(Time == 0)
+    
+   data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(mean_v0 = mean(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(sd_v0 = sd(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    plots[[i]] <- ggplot(data_to_plot, aes(x = conc, y = mean_v0)) +
+      geom_point() + 
+      geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
+      geom_errorbar(aes(ymin = mean_v0 - sd_v0, ymax = mean_v0 + sd_v0)) +
+      ggtitle(paste(samples[i],
+                paste("Km:", round(data_to_plot$Km[1],2), sep = " "),
+                paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "),
+              sep = "\n"))
+  }
+  pdf(paste0(output, 'MM_bins_no_error_bars.pdf'))
+  print(plots)
+  dev.off()
+  
 }
 
 plot_parameters <- function(data, output = getwd()) {
@@ -254,22 +331,43 @@ cutoff_curves <- c('20180213-PE9_D79S-A5-3.75',
                 '20180215-PE1_WT-A5-3.75',
                 '20180206-PE1_WT-E5-2.25',
                 '20180215-PE9_D79S-A8-2')
+
+bad_curves <- c('20180205-PE1_WT-C1-0.25',
+              '20180205-PE1_WT-C2-0.75',
+              '20180205-PE1_WT-C3-1',
+              '20180205-PE1_WT-C4-1.5',
+              '20180205-PE1_WT-C5-2.25',
+              '20180205-PE1_WT-C6-3.25',
+              '20180205-PE1_WT-E5-4.5',
+              '20180206-PE1_WT-C3-2.5',
+              '20180206-PE1_WT-G3-2.75',
+              '20180215-PE1_WT-C4-1.5',
+              '20180215-PE1_WT-A5-3.75',
+              '20180215-PE1_WT-G6-6',
+              '20180317-PE1_WT-G1-0.5',
+              '20180317-PE1_WT-G12-7.82',
+              '20180317-PE1_WT-G6-3',
+              '20180317-PE1_WT-G7-5')
+
 biotek.data <- subset(biotek.data, ! condition %in% cutoff_curves | Time < cutoff_time)
+biotek.data <- subset(biotek.data, ! condition %in% bad_curves)
 
 #### Fit data assuming photobleaching decay is exponential, with observations in fluorescence units
 processed.data <- biotek.data %>%
-  group_by(condition) %>%
+  group_by(sample, condition) %>%
   mutate(observed = fluorescence) %>%
-  do(run_nls(., deadtime = 0, debug = F)) %>%  # fit curve
+  do(run_nls(., deadtime = 0, debug = T)) %>%  # fit curve
   ungroup() %>%
   group_by(date, row) %>%
-  do(fit_conversion_factor(.)) %>%  # fit conversion ration from f_plateau
+  do(fit_conversion_factor(.)) %>%  # fit conversion ratio from f_plateau
   ungroup() %>%
   group_by(sample) %>%
   do(fit_MM(.))  # fit michaelis-menten
 
-# plot_raw_data(processed.data, by_sample = T, output = output)
-# plot_fits(processed.data, by_sample = T, output = output)
+plot_raw_data(biotek.data, by_sample = T, output = output)
+plot_fits(processed.data, by_sample = T, output = output)
 # plot_fits_show_bkgrnd(processed.data, by_sample = T, output = output)
-# plot_MM(processed.data, output = output)
+plot_MM(processed.data, output = output)
 # plot_parameters(processed.data, output = output)
+plot_MM_bins(processed.data, output = output)
+
