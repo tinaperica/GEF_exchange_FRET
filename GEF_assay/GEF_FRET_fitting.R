@@ -257,6 +257,7 @@ plot_MM_bins <- function(data, output = getwd()) {
     plots[[i]] <- ggplot(data_to_plot, aes(x = conc, y = mean_v0)) +
       geom_point() + 
       geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
+      geom_errorbar(aes(ymin = mean_v0 - sd_v0, ymax = mean_v0 + sd_v0)) +
       ggtitle(paste(samples[i],
                 paste("Km:", round(data_to_plot$Km[1],2), sep = " "),
                 paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "),
@@ -285,7 +286,6 @@ plot_MM_bins <- function(data, output = getwd()) {
     plots[[i]] <- ggplot(data_to_plot, aes(x = conc, y = mean_v0)) +
       geom_point() + 
       geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
-      geom_errorbar(aes(ymin = mean_v0 - sd_v0, ymax = mean_v0 + sd_v0)) +
       ggtitle(paste(samples[i],
                 paste("Km:", round(data_to_plot$Km[1],2), sep = " "),
                 paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "),
@@ -354,9 +354,10 @@ biotek.data <- subset(biotek.data, ! condition %in% bad_curves)
 
 #### Fit data assuming photobleaching decay is exponential, with observations in fluorescence units
 processed.data <- biotek.data %>%
+  filter(sample == 'PE1_WT') %>%
   group_by(sample, condition) %>%
   mutate(observed = fluorescence) %>%
-  do(run_nls(., deadtime = 0, debug = T)) %>%  # fit curve
+  do(run_nls(., deadtime = 0, debug = F)) %>%  # fit curve
   ungroup() %>%
   group_by(date, row) %>%
   do(fit_conversion_factor(.)) %>%  # fit conversion ratio from f_plateau
@@ -364,8 +365,8 @@ processed.data <- biotek.data %>%
   group_by(sample) %>%
   do(fit_MM(.))  # fit michaelis-menten
 
-plot_raw_data(biotek.data, by_sample = T, output = output)
-plot_fits(processed.data, by_sample = T, output = output)
+# plot_raw_data(biotek.data, by_sample = T, output = output)
+# plot_fits(processed.data, by_sample = T, output = output)
 # plot_fits_show_bkgrnd(processed.data, by_sample = T, output = output)
 plot_MM(processed.data, output = output)
 # plot_parameters(processed.data, output = output)
