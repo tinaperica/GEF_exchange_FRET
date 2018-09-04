@@ -1,14 +1,9 @@
-# import libraries
+#### import libraries
 library(tidyverse)
 library(lubridate)
 library(minpack.lm)
 
-
-
-# read in data
-inputfilename <- "GEF_assay/biotek_test_exp/data/good_data_parsed.txt"
-biotek.data <- read_delim(inputfilename, delim = "\t", col_names = T)
-
+remove(list = ls())
 
 run_nls <- function(data, deadtime, debug = FALSE) {
   
@@ -17,200 +12,363 @@ run_nls <- function(data, deadtime, debug = FALSE) {
   
   #### debug mode: if debug is TRUE, print out condition being fit 
   if (debug) { print(unique(data$condition)) }
-  
-  #### add the (estimated) dead time
-  if (deadtime > 0) {
-    deadtime_timepoints <- seq(-1*(deadtime), -5, 5)
-    timepoints_to_append <- data[1:length(deadtime_timepoints),]
-    timepoints_to_append$Time <- deadtime_timepoints
-    timepoints_to_append$observed <- NA
-    data <- rbind(data, timepoints_to_append)
-  }
-  start <- list(f0 = max(data$observed, na.rm = T),
-                f_plateau = 0.5 * max(data$observed, na.rm = T),
+
+  start <- list(f_plateau = min(data$observed, na.rm = T),
                 span1 = max(data$observed, na.rm = T) - min(data$observed, na.rm = T),
-                k = 0.001,
-                k_background = 3e-6)
-  lower <- c(0.1 * max(data$observed, na.rm = T),
-             0,
-             0,
-             1e-5, 
-             0)
-  out <- nlsLM(observed ~ span1 * exp(-k * Time) + (f0 - f_plateau - span1) * exp(-k_background * Time) + f_plateau,
-                      data = data, start = start, 
-                control = nls.lm.control(maxiter = 300))
-  #out <- nlsLM(observed ~ (f0 - f_plateau * exp(-k_background * Time)) * exp(-k * Time) + 
-   #              f_plateau * exp(-k_background * Time) + 5e5 * (k - 3e-5),
-    #           data = data, start = start, control = nls.lm.control(maxiter = 300))
+                span2 = 0.2*(max(data$observed, na.rm = T) - min(data$observed, na.rm = T)),
+                k = 7e-3,
+                k_background = 1e-4)
+  lower <- c(min(data$observed, na.rm = T),
+             0.0,
+             0.0,
+             0.0,
+             0.0)
+  upper <- c(max(data$observed, na.rm = T),
+             max(data$observed, na.rm = T),
+             0.4*max(data$observed, na.rm = T),
+             1.0,
+             1.0)
+  
+  if (data$sample[1] == 'PE4_R108L') {
+      start <- list(f_plateau = min(data$observed, na.rm = T),
+                span1 = max(data$observed, na.rm = T) - min(data$observed, na.rm = T),
+                span2 = 0.2*(max(data$observed, na.rm = T) - min(data$observed, na.rm = T)),
+                k = 1e-3,
+                k_background = 1e-4)
+  }
+
+  out <- nlsLM(observed ~ span1 * exp(-k * (Time+deadtime)) - span2 * (1 - exp(-k_background * (Time+deadtime))) + f_plateau,
+               data = data,
+               start = start,
+               lower = lower,
+               upper = upper,
+               control = nls.lm.control(maxiter = 300))
   
   #### save optimal parameters
-  f0 <- coef(out)[1]
-  f_plateau <- coef(out)[2]
-  span1 <- coef(out)[3]
+  f_plateau <- coef(out)[1]
+  span1 <- coef(out)[2]
+  span2 <- coef(out)[3]
   k <- coef(out)[4]
   k_background <- coef(out)[5]
 
-  # if (k_background < 0) {
-  #   start <- list(f0 = max(data$observed, na.rm = T),
-  #                 k = 0.001,
-  #                 #c = median(data$observed, na.rm = T),
-  #                 f_plateau = 0.7 * max(data$observed, na.rm = T)
-  #                 )
-  #   out <- nlsLM(observed ~ (f0 - f_plateau) * exp(-k * Time) + f_plateau,
-  #                data = data, start = start, control = nls.lm.control(maxiter = 300))
-  #   f0 <- coef(out)[1]
-  #   k <- coef(out)[2]
-  #   f_plateau <- coef(out)[3]
-  #   k_background <- 0
-  #   span1 <- f0 - f_plateau
-  #   span2 <- 0
-  # }
-  #### calculate ideal curves for overall fit, true exchange signal, and background, save
-  #data$predicted <- (f0 - f_plateau * exp(-k_background * data$Time)) * exp(-k * data$Time) + f_plateau * exp(-k_background * data$Time)
-  #data$exchange <- (f0 - f_plateau) * (exp(-k * data$Time)) + f_plateau
-  #data$background <- f_plateau * exp(-k_background * data$Time)
-  data$predicted <- span1 * exp(-k * data$Time) +  (f0 - f_plateau - span1) * exp(-k_background * data$Time) + f_plateau
-  data$exchange <- span1 * (exp(-k * data$Time)) + f_plateau
-  data$background <-  (f0 - f_plateau - span1) * exp(-k_background * data$Time) + f_plateau
-  data$k_background <- k_background
-  
+  data$predicted <- span1 * exp(-k * (data$Time+deadtime)) - span2 * (1 - exp(-k_background * (data$Time+deadtime))) + f_plateau
+  data$exchange <- span1 * exp(-k * (data$Time+deadtime))  + f_plateau
+  data$background <-  - span2 *(1 - exp(-k_background * (data$Time+deadtime)))
+
   #### save optimal parameters in the data table
-  data$f0 <- f0
   data$k <- k
   data$f_plateau <- f_plateau
   data$k_background <- k_background
   data$span1 <- span1
+  data$span2 <- span2
+
   ### calculate the initial rate
   data$vf0 = (span1 * k * exp(k * 0)) / (GEF_conc*0.001)   ### initial rate in fluorescence units
-  ### effective concentration
-  ## c0/c = f0/span1
-  #data$v0 <- (c0 * span1)/f0  * k *exp(k * 0) / (GEF_conc*0.001)   ## initial rate in concentration units 
-  
-  #data$v0 <- c0  * k *exp(k * 0) / (GEF_conc*0.001)   ## initial rate in concentration units 
-  #data$v0 = ( ((span1 - f_plateau)/span1) * c0 * k ) / (GEF_conc*0.001)   ### initial rate in concentration units
-  
-  data$f_signal_change <- (f0 - f_plateau) / f0 
+
   return(data)
 }
 
-plot_data <- function(data, debug = FALSE) {
-  
-  #### Call this to get rid of the "[[1]] [[2]] [[3]]..." printing during pdf plotting. note that it clears errors, must be removed when debugging
-  #sink('/dev/null')  
-  
-  #### set date, for filenaming purposes
-  today = gsub('-', '', today(tzone="US/Pacific"))
-  
-  #### plot data with fitted curves
-  plots <- list()
+fit_conversion_factor <- function(data) {
+  c_plateau_values <- list()
+  f_plateau_values <- list()
   conditions = unique(data$condition)
   for (i in seq_along(conditions)) {
-    data_to_plot <- data %>% filter(condition == conditions[i])
-    plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) + geom_point(color = "black") +
-      geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
-      geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
-      geom_line(data_to_plot, mapping = aes(x = Time, y = background), color = "blue") +
-      ggtitle(conditions[i])
+    data_temp <- data %>% filter(condition == conditions[i])
+    c_plateau_values[[i]] = 0.995*data_temp$conc[1]  # account 1/200 molecules being GDP instead of mGTP at steady-state
+    f_plateau_values[[i]] = data_temp$f_plateau[1]
   }
-  pdf(paste0(today, 'data.pdf'))
-  print(plots)
-  dev.off()
-  
-  #### make michaelis-menten plot of v0 vs. conc
-  # plots <- list()
-  # samples = unique(data$sample)
-  # for (i in seq_along(samples)) {
-  #   data_to_plot <- data %>% filter(sample == samples[i])
-  #   plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = conc, y = v0, color = as.character(date))) + geom_point() +
-  #     ggtitle(samples[i])
-  # }
-  # pdf(paste0(today, 'MM.pdf'), width = 10)
-  # print(plots)
-  # dev.off()
-  
-  #### plot histograms showing distribution of parameters across all fits
-  if (debug) {
-    pdf(paste(today, 'params.pdf', sep = '_'))
-    #print(ggplot(data, aes(x = conc, y = f0, color = sample)) + geom_point())
-    print(ggplot(data, aes(x = conc, y = k, color = as.character(date))) + geom_point())
-    print(ggplot(data, aes(x = conc, y = f_plateau, color = as.character(date))) + geom_point())
-    #print(ggplot(data, aes(x = conc, y = f_signal_change, color = sample)) + geom_point())
-    print(ggplot(data, aes(x = conc, y = k_background, color = as.character(date))) + geom_point())
-    print(ggplot(data, aes(x = conc, y = span1, color = as.character(date))) + geom_point())
-    #print(ggplot(data, aes(x = conc, y = span2, color = sample)) + geom_point())
-    print(ggplot(data, aes(x = conc, y = v0, color = as.character(date))) + geom_point())
-    print(ggplot(data, aes(x = conc, y = vf0, color = sample)) + geom_point())
-    dev.off()
-  }
-  
+  c_plateau_values <- unlist(c_plateau_values)
+  f_plateau_values <- unlist(f_plateau_values)
+
+  out <- lm(c_plateau_values ~ f_plateau_values)
+  data$conversion_ratio = out$coef[2] # need to divide by the factor that accounts for trp signal decrease for mant bound
+  data$v0 = data$vf0 * data$conversion_ratio
+
   return(data)
 }
 
 fit_MM <- function(data) {
+  data_to_fit <- data %>% filter(Time == 0)
   start <- list(Vmax = 5, Km = 2)
+  lower <- c(0.0, 1e-12)
+  upper <- c(100, 1e1  )
   out <- nlsLM(v0 ~ (conc * Vmax) / (Km + conc),
-               data = data, start = start, control = nls.lm.control(maxiter = 200))
+               data = data_to_fit,
+               start = start,
+               lower = lower,
+               upper = upper,
+               control = nls.lm.control(maxiter = 200))
   Vmax <- coef(out)[1]
   Km <- coef(out)[2]
-  kcat <- Vmax
-  data$predicted_v0 <- (data$conc * Vmax) / (Km + data$conc)
-  data$kcat <- kcat
+  data$kcat <- Vmax
   data$Km <- Km
+  data$predicted_v0 <- (data$conc * Vmax) / (Km + data$conc)
   return(data)
 }
 
-#### Make a copy of data to be transformed
-data.exp <- biotek.data
+plot_raw_data <- function(data, by_sample = FALSE, output = getwd()) {
+  
+  today = gsub('-', '', today(tzone="US/Pacific")) # set date, for filenaming purposes
+  
+  if (by_sample) {
+    samples = unique(data$sample)
+    for (j in seq_along(samples)) {
+        data_mutant <- data %>% filter(sample == samples[j])
+        plots <- list()
+        conditions = unique(data_mutant$condition)
+        for (i in seq_along(conditions)) {
+          data_to_plot <- data_mutant %>% filter(condition == conditions[i]) 
+          plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = fluorescence)) +
+            geom_point(color = "black") +
+            ggtitle(conditions[i])
+        }
+        pdf(paste0(output, paste(samples[j], 'raw_data.pdf', sep = '_')))
+        print(plots)
+        dev.off()
+    }
+  if (!by_sample) {
+    plots <- list()
+    conditions = unique(data$condition)
+    for (i in seq_along(conditions)) {
+      data_to_plot <- data %>% filter(condition == conditions[i]) 
+      plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
+        geom_point(color = "black") +
+        ggtitle(conditions[i])
+    }
+    pdf(paste0(output, 'raw_data.pdf'))
+    print(plots)
+    dev.off()
+    }
+  }
+}
+
+plot_fits <- function(data, by_sample = FALSE, output = getwd()) {
+  
+  if (by_sample) {
+    samples = unique(data$sample)
+    for (j in seq_along(samples)) {
+        data_mutant <- data %>% filter(sample == samples[j])
+        plots <- list()
+        conditions = unique(data_mutant$condition)
+        for (i in seq_along(conditions)) {
+          data_to_plot <- data_mutant %>% filter(condition == conditions[i]) 
+          plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
+            geom_point(color = "black") +
+            geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+            # geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+            ggtitle(conditions[i])
+        }
+        pdf(paste0(output, paste(samples[j], 'fits.pdf', sep = '_')))
+        print(plots)
+        dev.off()
+    }
+  if (!by_sample) {
+    plots <- list()
+    conditions = unique(data$condition)
+    for (i in seq_along(conditions)) {
+      data_to_plot <- data %>% filter(condition == conditions[i]) 
+      plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
+        geom_point(color = "black") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+        # geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+        ggtitle(conditions[i])
+    }
+    pdf(paste0(output, 'fits.pdf'))
+    print(plots)
+    dev.off()
+    }
+  }
+}
+
+plot_fits_show_bkgrnd <- function(data, by_sample = FALSE, output = getwd()) {
+  if (by_sample) {
+    samples = unique(data$sample)
+    for (j in seq_along(samples)) {
+        data_mutant <- data %>% filter(sample == samples[j])
+        plots <- list()
+        conditions = unique(data_mutant$condition)
+        for (i in seq_along(conditions)) {
+          data_to_plot <- data_mutant %>% filter(condition == conditions[i]) 
+          plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
+            geom_point(color = "black") +
+            geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+            geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+            geom_line(data_to_plot, mapping = aes(x = Time, y = background), color = "blue") +
+            ggtitle(conditions[i])
+        }
+        pdf(paste0(output, paste(samples[j], 'fits_show_bkgrnd.pdf', sep = '_')))
+        print(plots)
+        dev.off()
+    }
+  if (!by_sample) {
+    plots <- list()
+    conditions = unique(data$condition)
+    for (i in seq_along(conditions)) {
+      data_to_plot <- data %>% filter(condition == conditions[i]) 
+      plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed)) +
+        geom_point(color = "black") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = predicted), color = "red") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = exchange), color = "green") +
+        geom_line(data_to_plot, mapping = aes(x = Time, y = background), color = "blue") +
+        ggtitle(conditions[i])
+    }
+    pdf(paste0(output, 'fits_show_bkgrnd.pdf'))
+    print(plots)
+    dev.off()
+    }
+  }
+}
+
+plot_MM <- function(data, output = getwd()) {
+  plots <- list()
+  samples = unique(data$sample)
+  for (i in seq_along(samples)) {
+    data_to_plot <- data %>% filter(sample == samples[i]) %>% filter(Time == 0)
+    plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = conc, y = v0, color = as.character(date))) + 
+      geom_point() + 
+      geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
+      ggtitle(paste(samples[i], paste("Km:", round(data_to_plot$Km[1],2), sep = " "), paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "), sep = "\n"))
+  }
+  pdf(paste0(output, 'MM.pdf'))
+  print(plots)
+  dev.off()
+}
+
+plot_MM_bins <- function(data, output = getwd()) {
+  
+  plots <- list()
+  samples = unique(data$sample)
+  for (i in seq_along(samples)) {
+    
+    data_to_plot <- data %>%
+      filter(sample == samples[i]) %>%
+      filter(Time == 0)
+    
+   data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(mean_v0 = mean(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(sd_v0 = sd(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    plots[[i]] <- ggplot(data_to_plot, aes(x = conc, y = mean_v0)) +
+      geom_point() + 
+      geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
+      geom_errorbar(aes(ymin = mean_v0 - sd_v0, ymax = mean_v0 + sd_v0)) +
+      ggtitle(paste(samples[i],
+                paste("Km:", round(data_to_plot$Km[1],2), sep = " "),
+                paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "),
+              sep = "\n"))
+  }
+  pdf(paste0(output, 'MM_bins.pdf'))
+  print(plots)
+  dev.off()
+  
+  for (i in seq_along(samples)) {
+    
+    data_to_plot <- data %>%
+      filter(sample == samples[i]) %>%
+      filter(Time == 0)
+    
+   data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(mean_v0 = mean(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    data_to_plot <- data_to_plot %>%
+      group_by(conc) %>%
+      summarise(sd_v0 = sd(v0)) %>%
+      inner_join(data_to_plot, by = "conc")
+
+    plots[[i]] <- ggplot(data_to_plot, aes(x = conc, y = mean_v0)) +
+      geom_point() + 
+      geom_line(aes(x = conc, y = predicted_v0, color = sample)) +
+      ggtitle(paste(samples[i],
+                paste("Km:", round(data_to_plot$Km[1],2), sep = " "),
+                paste("kcat:", round(data_to_plot$kcat[1],2), sep = " "),
+              sep = "\n"))
+  }
+  pdf(paste0(output, 'MM_bins_no_error_bars.pdf'))
+  print(plots)
+  dev.off()
+  
+}
+
+plot_parameters <- function(data, output = getwd()) {
+  samples = unique(data$sample)
+  for (i in seq_along(samples)) {
+    data_to_plot <- data %>% filter(sample == samples[i]) %>% filter(Time == 0)
+    pdf(paste0(output, paste(samples[i], 'params.pdf', sep = '_')))
+    print(ggplot(data_to_plot, aes(x = conc, y = 1000*k, color = as.character(date))) + geom_point())
+    print(ggplot(data_to_plot, aes(x = conc, y = f_plateau, color = as.character(date))) + geom_point())
+    print(ggplot(data_to_plot, aes(x = conc, y = k_background, color = as.character(date))) + geom_point())
+    print(ggplot(data_to_plot, aes(x = conc, y = span1, color = as.character(date))) + geom_point())
+    print(ggplot(data_to_plot, aes(x = conc, y = span2, color = sample)) + geom_point())
+    print(ggplot(data_to_plot, aes(x = conc, y = vf0, color = as.character(date))) + geom_point())
+    print(ggplot(data_to_plot, aes(x = conc, y = v0, color = as.character(date))) + geom_point())
+    print(ggplot(data_to_plot, aes(x = conc, y = v0/0.4, color = as.character(date))) + geom_point())
+    # print(ggplot(data_to_plot, aes(x = conc, y = v0, color = as.character(date))) + geom_point() + geom_text(aes(label=conc),hjust=0, vjust=0) + coord_cartesian(xlim = c(0,15), ylim = c(0, 6)))
+    dev.off()
+  }
+}
+
+#### set output directory
+today = gsub('-', '', today(tzone="US/Pacific")) # set date, for filenaming purposes
+output <- paste0(today, '_output', '/')
+dir.create(file.path(getwd(), output), showWarnings = FALSE)
+
+#### read in data
+inputfilename <- "GEF_assay/biotek_test_exp/data/good_data_parsed.txt"
+biotek.data <- read_delim(inputfilename, delim = "\t", col_names = T)
+
+#### cut off curves with odd bumps
+cutoff_curves <- c('20180213-PE9_D79S-A5-3.75',
+                '20180213-PE9_D79S-A6-4',
+                '20180215-PE1_WT-A4-3',
+                '20180215-PE1_WT-A5-3.75',
+                '20180206-PE1_WT-E5-2.25',
+                '20180215-PE9_D79S-A8-2')
+
+bad_curves <- c('20180205-PE1_WT-C1-0.25',
+              '20180205-PE1_WT-C2-0.75',
+              '20180205-PE1_WT-C3-1',
+              '20180205-PE1_WT-C4-1.5',
+              '20180205-PE1_WT-C5-2.25',
+              '20180205-PE1_WT-C6-3.25',
+              '20180205-PE1_WT-E5-4.5',
+              '20180206-PE1_WT-C3-2.5',
+              '20180206-PE1_WT-G3-2.75',
+              '20180215-PE1_WT-C4-1.5',
+              '20180215-PE1_WT-A5-3.75',
+              '20180215-PE1_WT-G6-6',
+              '20180317-PE1_WT-G1-0.5',
+              '20180317-PE1_WT-G12-7.82',
+              '20180317-PE1_WT-G6-3',
+              '20180317-PE1_WT-G7-5')
+
+biotek.data <- subset(biotek.data, ! condition %in% cutoff_curves | Time < cutoff_time)
+biotek.data <- subset(biotek.data, ! condition %in% bad_curves)
 
 #### Fit data assuming photobleaching decay is exponential, with observations in fluorescence units
-data.exp <- data.exp %>%
-  filter(sample == "PE1_WT") %>%
-  group_by(condition) %>%
+processed.data <- biotek.data %>%
+  filter(sample == 'PE1_WT') %>%
+  group_by(sample, condition) %>%
   mutate(observed = fluorescence) %>%
-  do(run_nls(., deadtime = 0, debug = T))
+  do(run_nls(., deadtime = 0, debug = F)) %>%  # fit curve
+  ungroup() %>%
+  group_by(date, row) %>%
+  do(fit_conversion_factor(.)) %>%  # fit conversion ratio from f_plateau
+  ungroup() %>%
+  group_by(sample) %>%
+  do(fit_MM(.))  # fit michaelis-menten
 
-fit.parameters <- data.exp %>% 
-  select(sample, date, conc, condition, span1, f0, k, k_background, f_plateau, vf0, v0, f_signal_change) %>% 
-  unique() %>%
-  arrange(sample, conc)
-fit.parameters %>% filter(v0 < 10 & v0 > 0) %>%
-ggplot(., aes(conc, v0, color = as.character(sample))) + geom_point()
+# plot_raw_data(biotek.data, by_sample = T, output = output)
+# plot_fits(processed.data, by_sample = T, output = output)
+# plot_fits_show_bkgrnd(processed.data, by_sample = T, output = output)
+plot_MM(processed.data, output = output)
+# plot_parameters(processed.data, output = output)
+plot_MM_bins(processed.data, output = output)
 
-
-#ggsave("~/Desktop/temp.pdf")
-
-data.exp <- plot_data(data.exp, debug = T)
-
-
-
-samples <- fit.parameters %>% pull(sample) %>% unique()
-#samples <- samples[c(1:4,6)]
-MM.plots <- list()
-for (s in seq_along(samples)) {
-  temp <- fit.parameters %>% filter(sample == samples[s])
-  MM.plots[[s]] <- ggplot(temp, aes(x = conc, y = v0, color = as.character(date))) + 
-    geom_point() + ggtitle(samples[s])
-}
-pdf("MM_curve.pdf", width = 10)
-print(MM.plots)
-dev.off()
-
-
-
-MM.data <- tibble(v0 = double(), conc = double(), 
-                sample = character(), predicted_v0 = double(), 
-                kcat = double(), Km = double())
-for (samp in samples) {
-  temp <- fit.parameters %>%
-    ungroup() %>%
-    filter(sample == samp) %>%
-    select(v0, conc, sample) %>%
-    do(fit_MM(data = .))
-  MM.data <- bind_rows(MM.data, temp)
-}
-
-ggplot(MM.data, mapping = aes(x = conc, y = v0, color = sample)) + geom_point() + geom_line(aes(x = conc, y = predicted_v0))
-
-Km_kcat_df <- MM.data %>%
-  select(sample, kcat, Km) %>%
-  unique()
