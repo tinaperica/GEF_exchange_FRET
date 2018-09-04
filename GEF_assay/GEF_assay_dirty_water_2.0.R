@@ -8,15 +8,15 @@ SubstrateDilute <- function(stock, work, volume, Mw) {
 }
 
 ### Set up  experiment parameters
-plate <- 6
-row <- "G"
-date <- "20180220"
+plate <- 8
+row <- "A"
+date <- "20180904"
 outdir <- "GEF_assay/biotek_test_exp/"
-Rans <- c("PE5_R108A", "PE6_H141V")
+Rans <- c("PE10_G80A", "PE11_T34G", "PE12_H141R")
 GEFs <- c("SRM1")
 GEF.stock <- 500  # nM
 GEF.working <- 5 # nM
-Rans.stock.conc <- c(33.72, 41.67)
+Rans.stock.conc <- c(40.91, 37.6, 38.8)
 nucleotides<-c('mant-GTP')
 nucleotide.stock.conc <- 2000
 #mant.stock <- 2000 # uM
@@ -24,25 +24,42 @@ nucleotide.working <- 200 # uM
 reaction.volume <- 100 # ul
 Ran.premix.volume <- 110
 final.Ran.conc <- list()
+#run_conc <- c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 12)
+# final.Ran.conc[[1]] = c(0.25, 0.75, 1.25, 1.75)
+# final.Ran.conc[[2]] = c(0.25, 0.75, 1.25, 1.75)
+# final.Ran.conc[[3]] = c(0.25, 0.75, 1.25, 1.75)
+
+# final.Ran.conc[[1]] = c(0.5, 1, 1.5, 2)
+# final.Ran.conc[[2]] = c(0.5, 1, 1.5, 2)
+# final.Ran.conc[[3]] = c(0.5, 1, 1.5, 2)
+# # # # 
+# final.Ran.conc[[1]] = c(2.25, 2.75, 3.25, 4)
+# final.Ran.conc[[2]] = c(2.25, 2.75, 3.25, 4)
+# final.Ran.conc[[3]] = c(2.25, 2.75, 3.25, 4)
+
+# 
+# final.Ran.conc[[1]] = c(2.5, 3, 3.5, 4.5)
+# final.Ran.conc[[2]] = c(2.5, 3, 3.5, 4.5)
+# final.Ran.conc[[3]] = c(2.5, 3, 3.5, 4.5)
+
+# final.Ran.conc[[1]] = c(5, 6, 7, 8)
+# final.Ran.conc[[2]] = c(5, 6, 7, 8)
+# final.Ran.conc[[3]] = c(5, 6, 7, 8)
+# # # 
+final.Ran.conc[[1]] = c(5.5, 9, 10, 12)
+final.Ran.conc[[2]] = c(5.5, 9, 10, 12)
+final.Ran.conc[[3]] = c(5.5, 9, 10, 12)
+
 #final.Ran.conc[[1]] = c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 12)
 #final.Ran.conc[[2]] = c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 12)
 #final.Ran.conc[[1]] = c(1.75, 2, 2.5, 3, 3.75, 4)
 #final.Ran.conc[[2]] = c(1.75, 2, 2.5, 3, 3.75, 4)
 #final.Ran.conc[[1]] = c(0.25, 0.75, 1, 1.5, 2.25, 3.25)
 #final.Ran.conc[[2]] = c(0.25, 0.75, 1, 1.5, 2.25, 3.25)
-#final.Ran.conc[[1]] = c(0.5, 1.25, 2.75, 3.5, 4.5, 6)
-#final.Ran.conc[[2]] = c(0.5, 1.25, 2.75, 3.5, 4.5, 6)
 #final.Ran.conc[[1]] = c(5, 7, 8, 9, 10, 12)
 #final.Ran.conc[[2]] = c(5, 7, 8, 9, 10, 12)
-#final.Ran.conc[[1]] = c(0.25, 0.75, 1, 1.75, 2.5, 4)
-#final.Ran.conc[[2]] = c(0.25, 0.75, 1, 1.75, 2.5, 4)
 #final.Ran.conc[[1]] = c(0.5, 1.5, 2, 3, 3.5, 4.5)
 #final.Ran.conc[[2]] = c(0.5, 1.5, 2, 3, 3.5, 4.5)
-#final.Ran.conc[[1]] = c(2.75, 3.75, 4.75, 5.5, 6, 6.5)
-#final.Ran.conc[[2]] = c(2.75, 3.75, 4.75, 5.5, 6, 6.5)
-#final.Ran.conc[[1]] = c(5, 7, 8, 9, 10, 12)
-#final.Ran.conc[[2]] = c(5, 7, 8, 9, 10, 12)
-final.Ran.conc[[1]] = c(0.25, 0.75, 1, 1.75, 2.5, 4, 0.5, 1.5, 2, 3, 3.5, 4.5, 2.75, 3.75, 4.75, 5.5, 6, 6.5, 5, 7, 8, 9, 10, 12)
 
 nucleotide.V = reaction.volume/(nucleotide.stock.conc/nucleotide.working)
 GEF.V <- round(reaction.volume/(GEF.stock/GEF.working), 2)
@@ -51,9 +68,11 @@ Ran.premix.to.add <- reaction.volume - GEF.nucleotide.premix.volume
 
 reaction.mix.table <- data.frame()
 index.table <- data.frame()
+well_count <- 0
 for (i in 1:length(Rans)) {
   prot <- Rans[i]
   for (j in seq_along(final.Ran.conc[[i]])) {
+    well_count <- well_count + 1
     fin.Ran.conc <- final.Ran.conc[[i]][j]
     Ran.premix.conc <- round(fin.Ran.conc * (1 + ( (reaction.volume - Ran.premix.to.add) / reaction.volume )), 2)
     stock.conc <- Rans.stock.conc[i]
@@ -62,10 +81,10 @@ for (i in 1:length(Rans)) {
     reaction.mix.table <- rbind(reaction.mix.table, data.frame(plate, "well" = paste0(row,(j+((i-1)*6))), prot, fin.Ran.conc, Ran.volume, Ran.volume/2, Ran.premix.buffer.volume, 
                                                               GEF.stock, GEF.working, 
                                                               Ran.premix.to.add, GEF.nucleotide.premix.volume, date))
-    index.table <- rbind(index.table, data.frame(plate, prot, "well" = paste0(row, (j+((i-1)*6))), fin.Ran.conc, GEF.working, date, "cutoff_time" = 3000))
+    index.table <- rbind(index.table, data.frame(plate, prot, "well" = paste0(row, well_count), fin.Ran.conc, GEF.working, date, "cutoff_time" = 3000))
   }
 }
-
+### (j+((i-1)*6))
 reaction.mix.table
 write.table(reaction.mix.table, file = paste0(outdir, "reaction_mix_temp.txt"), quote = F, row.names = F, sep = "\t")
 (Ran.volume.sum <- reaction.mix.table %>%

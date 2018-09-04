@@ -4,18 +4,22 @@
 .Ruserdata
 .DS_Store
 
+#Nanodrop data
+GEF_assay/Nanodrop
 # raw kinetics data
-/GTPase_assay/data/
-/GTP_cycle/data/
+GTPase_assay/data/
+GTP_cycle/data/
 # old and deprecated data
-/GTPase_assay/old*/
-
+GTPase_assay/old*/
+GEF_assay/biotek_test_exp
 # experiment settings
-/GTPase_assay/GAP_assay_experiments/
-/MOG1_binding/experiments/
-/GTP_cycle/experiments/
+GEF_assay/GEF_assay_experiments
+GTPase_assay/GAP_assay_experiments/
+MOG1_binding/experiments/
+GTP_cycle/experiments/
 # temp plots
+output_plots
 *pdf
-*pdf
+
 
 

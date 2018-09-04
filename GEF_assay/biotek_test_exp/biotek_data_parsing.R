@@ -26,10 +26,10 @@ read_and_gather <- function(file) {
   return(dataset)
 }
 # combine all the files into one tibble
-(files <- dir("GEF_assay/biotek_test_exp/data/good_data", pattern = ".txt", full.names = T))
-outfile <- "GEF_assay/biotek_test_exp/data/good_data_parsed.txt"
+(files <- dir("GEF_assay/2018_data/", pattern = ".txt", full.names = T))
+outfile <- "GEF_assay/good_data_parsed.txt"
 ### load the index file (has conditions per well)
-(index <- as.tibble(read_delim("GEF_assay/biotek_test_exp/good_data_index_cleaned.txt", col_names = T, delim = "\t")))
+(index <- as.tibble(read_delim("GEF_assay/2018_data/data_index.txt", col_names = T, delim = "\t")))
 ### read in the data files, join them with the info from the index file and make them tidy
 ( dataset <- do.call("bind_rows", lapply(files, FUN = read_and_gather)) )
 ##### add code to remove bad data (based on a file with a list of data points to remove)
