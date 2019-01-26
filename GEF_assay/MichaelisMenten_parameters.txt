@@ -1,2 +1,0 @@
-prot	Vmax	Km	kcat	kcat_error	Km_error	sd_of_fit
-PE1_WT	3.219	1.283	3.219	0.0247	0.396	0.53

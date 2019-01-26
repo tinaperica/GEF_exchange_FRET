@@ -1,0 +1,19 @@
+sample	well	conc	GAP_conc	sensor_conc	date	fit	cutoff_time	intercept	percent_fit	data_file
+PE1_WT	C1	0.25	1	10	20190122	exp	300			GTPase_assay/2018_data/20190122_GAP_assay.txt
+PE1_WT	C2	0.5	1	10	20190122	exp	325	-119	0.15	GTPase_assay/2018_data/20190122_GAP_assay2.txt
+PE1_WT	C3	0.75	1	10	20190122	exp	360	21	0.15	GTPase_assay/2018_data/20190122_GAP_assay3.txt
+PE1_WT	C4	1	1	10	20190122	exp	375	-58	0.15	GTPase_assay/2018_data/20190122_GAP_assay3.txt
+PE1_WT	C5	1.25	1	10	20190122	exp	420	57	0.1	GTPase_assay/2018_data/20190122_GAP_assay3.txt
+PE1_WT	C6	1.5	1	10	20190122	lin	420	-26	0.1	GTPase_assay/2018_data/20190122_GAP_assay3.txt
+PE1_WT	E1	2	1	10	20190122	lin	635	334	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E2	2.5	1	10	20190122	lin	825	412	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E3	3	1	20	20190122	lin	795	-200	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E4	3.5	1	20	20190122	lin	900	-100	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E5	4	1	20	20190122	lin	920	105	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E6	4.5	1	20	20190122	lin	985	74	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E7	5	1	20	20190122	lin	985	220	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E8	5.5	1	20	20190122	lin	1000	383	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E9	6	1	20	20190122	lin	1500	171	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E10	8	1	20	20190122	lin	1400	806	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E11	10	1	20	20190122	lin	2500	1096	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt
+PE1_WT	E12	12	1	20	20190122	lin	2500	1324	0.1	GTPase_assay/2018_data/20190122_GAP_assay4.txt

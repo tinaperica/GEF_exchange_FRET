@@ -1,0 +1,63 @@
+sample	well	conc	GAP_conc	sensor_conc	date	fit	intercept	data_file 
+PE1_WT	A1	0.25	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E1	0.25	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A2	0.5	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E2	0.5	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A3	0.75	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E3	0.75	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A4	1	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E4	1	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A5	1.25	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E5	1.25	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A6	1.5	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E6	1.5	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A7	1.75	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E7	1.75	2	10	20181210	exp		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A8	2	2	10	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	A9	2	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E8	2	2	10	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	E9	2.25	2	10	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A10	2.5	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E10	2.5	2	10	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	E11	2.75	2	10	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A11	3	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	E12	3	2	10	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay3.txt
+PE1_WT	A12	3.5	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay.txt
+PE1_WT	C1	4	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C2	5	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C3	6	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C4	7	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C5	8	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C6	9	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C7	10	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C8	11	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C9	12	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C10	13	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C11	14	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	C12	15	2	20	20181210	lin		GTPase_assay/2018_data/20181210_GAP_sensor_assay2.txt
+PE1_WT	A1	0.25	2	10	20190117	exp	240			GTPase_assay/2018_data/20190117_GAP_assay.txt
+PE1_WT	C1	0.25	2	10	20190117	exp				GTPase_assay/2018_data/20190117_GAP_assay2.txt
+PE1_WT	A8	0.5	2	10	20190117	exp	140			GTPase_assay/2018_data/20190117_GAP_assay3.txt
+PE1_WT	A9	0.5	2	10	20190117	exp	165			GTPase_assay/2018_data/20190117_GAP_assay4.txt
+PE1_WT	A10	0.75	2	10	20190117	exp	130			GTPase_assay/2018_data/20190117_GAP_assay5.txt
+PE1_WT	A11	0.75	2	10	20190117	exp	130			GTPase_assay/2018_data/20190117_GAP_assay6.txt
+PE1_WT	A12	1	2	10	20190117	exp	360			GTPase_assay/2018_data/20190117_GAP_assay7.txt
+PE1_WT	G2	1.5	2	10	20190117	exp	440			GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G3	1.75	2	10	20190117	exp	370			GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G4	2	2	10	20190117	exp	325			GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G5	2.25	2	10	20190117	exp	345			GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G6	2.5	2	10	20190117	exp	350	635	0.1	GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G7	2.75	2	10	20190117	exp	460	1762	0.1	GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G8	3	2	20	20190117	exp	515	6111	0.1	GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G9	3.5	2	20	20190117	exp	550	2667	0.1	GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G10	4	2	20	20190117	exp	550	2775	0.1	GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G11	4.5	2	20	20190117	exp	560	2607	0.1	GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	G12	5	2	20	20190117	exp	560	2931	0.1	GTPase_assay/2018_data/20190117_GAP_assay8.txt
+PE1_WT	A1	5.5	2	20	20190117	exp	575	950	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt
+PE1_WT	A2	6	2	20	20190117	exp	575	826	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt
+PE1_WT	A3	7	2	20	20190117	exp	680	1467	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt
+PE1_WT	A4	8	2	20	20190117	lin	805	2632	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt
+PE1_WT	A5	9	2	20	20190117	lin	875	1403	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt
+PE1_WT	A6	10	2	20	20190117	lin	1280	1339	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt
+PE1_WT	A7	11	2	20	20190117	lin	875	1496	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt
+PE1_WT	A8	12	2	20	20190117	lin	800	1964	0.1	GTPase_assay/2018_data/20190117_GAP_assay9.txt

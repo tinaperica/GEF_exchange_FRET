@@ -10,14 +10,14 @@ read_and_gather <- function(file) {
   last_data_row <- grep(raw_in, pattern = "Results")
   if (length(last_data_row) > 0) {
     n_rows_to_read <- last_data_row - first_data_row - 2
-    data_in <-  read_delim(file, delim = "\t", col_names = T, skip = (first_data_row - 1),
-                           n_max = n_rows_to_read, locale = locale(encoding = 'UTF-8'))
+    data_in <-  read_tsv(file, col_names = T, skip = (first_data_row - 1),
+                           n_max = n_rows_to_read, locale = locale(encoding = 'windows-1250'))
   } else {
     data_in <-  read_delim(file, delim = "\t", col_names = T, skip = (first_data_row - 1),
                            locale = locale(encoding = 'UTF-8'))
   }
   
-  data_in <- select(data_in, -Temp)
+  data_in <- data_in %>% select(., -2)
   data_gathered <- as.tibble(gather(data_in, key = well, value = fluorescence, -Time))
   data_gathered$Time <- as.numeric(hms(data_gathered$Time))   #### hms gives a warning when parsing 00:00:00
   relevant.index <- filter(index, data_file == file)
@@ -26,10 +26,10 @@ read_and_gather <- function(file) {
   return(dataset)
 }
 # combine all the files into one tibble
-(files <- dir("GEF_assay/2018_data/", pattern = ".txt", full.names = T))
+(files <- dir("GEF_assay/2018_data", pattern = "GEF_FRET_assay", full.names = T))
 outfile <- "GEF_assay/good_data_parsed.txt"
 ### load the index file (has conditions per well)
-(index <- as.tibble(read_delim("GEF_assay/2018_data/data_index.txt", col_names = T, delim = "\t")))
+(index <- read_tsv("GEF_assay/2018_data/data_index.txt", col_names = T))
 ### read in the data files, join them with the info from the index file and make them tidy
 ( dataset <- do.call("bind_rows", lapply(files, FUN = read_and_gather)) )
 ##### add code to remove bad data (based on a file with a list of data points to remove)

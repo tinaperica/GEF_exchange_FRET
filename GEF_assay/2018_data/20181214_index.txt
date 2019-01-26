@@ -1,0 +1,7 @@
+sample	well	conc	GEF_conc	date	fit	linear_fit_fraction	intercept	data_file
+PE4_R108L	G3	5	0	20181214	lin	0.2	730	GEF_assay/2018_data/20181214_GEF_FRET_assay2.txt
+PE4_R108L	G4	5	5	20181214	lin	0.2	730	GEF_assay/2018_data/20181214_GEF_FRET_assay2.txt
+PE4_R108L	G5	5	10	20181214	lin	0.2	735	GEF_assay/2018_data/20181214_GEF_FRET_assay2.txt
+PE4_R108L	G6	5	15	20181214	lin	0.2	740	GEF_assay/2018_data/20181214_GEF_FRET_assay2.txt
+PE4_R108L	G7	5	20	20181214	lin	0.2	740	GEF_assay/2018_data/20181214_GEF_FRET_assay2.txt
+PE4_R108L	G8	5	30	20181214	lin	0.2	740	GEF_assay/2018_data/20181214_GEF_FRET_assay2.txt
