@@ -6,9 +6,8 @@
 
 #Nanodrop data
 GEF_assay/Nanodrop
-# raw kinetics data
-GTPase_assay/data/
-GTP_cycle/data/
+# parsed kinetics data
+GEF_assay/good_data_parsed.txt
 # old and deprecated data
 GTPase_assay/old*/
 GEF_assay/biotek_test_exp

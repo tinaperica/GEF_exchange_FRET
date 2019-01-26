@@ -22,10 +22,9 @@ dataset <- read_tsv("GAP_assay_data_parsed.txt")
 #data <- dataset %>% filter(condition == "20190122-PE1_WT-C3-0.75-1-10")
 #upper <- c(300, 2500, 1)
 #lower <- c(-10, 1100, 0.0001)
-run_fit <- function (data, fit, start, upper, lower, cutoff_time, f0_intercept, percent_fit) {
+run_fit <- function (data, fit, start, upper, lower, f0_intercept, percent_fit) {
   c0 <- data$conc[1]
   GAP_conc <- data$GAP_conc[1]
-  data <- data %>% filter(Time < cutoff_time)
   if (fit == "exp") {
     out <- nlsLM(product_conc ~ f0 + (f_plat - f0) * (1 - exp(-k * Time)),
                  data = data,
@@ -161,7 +160,8 @@ server <- function(input, output, session) {
     dataset %>%
       filter(sample == input$sample) %>%
       filter(condition == input$condition) %>%
-      do(run_fit(., fit = input$fit, start = start, upper = upper, lower = lower, input$cutoff_time, f0_intercept = 0.5*(upper[1]+lower[1]), input$percent_fit)) # fit curve or line
+      filter(Time < input$cutoff_time) %>% 
+      do(run_fit(., fit = input$fit, start = start, upper = upper, lower = lower, f0_intercept = 0.5*(upper[1]+lower[1]), input$percent_fit)) # fit curve or line
     
   })
   
