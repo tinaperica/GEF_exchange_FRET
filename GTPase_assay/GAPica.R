@@ -50,57 +50,61 @@ write_tsv(dataset, path = outfile)
 
 
 run_linear <- function(data) {
+  GAP_conc <- data$GAP_conc[1]
   start_intercept <- data %>% pull(intercept) %>% unique()
   percent_fit <- data %>% pull(percent_fit) %>% unique()
-  max_flo <- max(data$observed, na.rm = T)
-  min_flo <- min(data$observed, na.rm = T)
+  max_flo <- max(data$product_conc, na.rm = T)
+  min_flo <- min(data$product_conc, na.rm = T)
   delta_flo <- max_flo - min_flo
   cutoff_fluo <- min_flo + (percent_fit * delta_flo)
-  initial_data <- data %>% filter(observed < cutoff_fluo)
-  data %>% ggplot(aes(x = Time, y = observed)) + geom_point() + geom_point(data = initial_data, color = "red")
-  fit <- lm(I(observed - start_intercept) ~ Time - 1, data = initial_data)
+  initial_data <- data %>% filter(product_conc < cutoff_fluo)
+  data %>% ggplot(aes(x = Time, y = product_conc)) + geom_point() + geom_point(data = initial_data, color = "red")
+  fit <- lm(I(product_conc - start_intercept) ~ Time - 1, data = initial_data)
   slope <- fit$coefficients
   data$predicted <- slope * data$Time + start_intercept  
   data$slope <- slope
   data$intercept <- start_intercept
   data$f0 <- start_intercept
   data$f_plateau <- max_flo
-  data$vf0 <- - slope / (GAP_conc * 0.001)
+  data$v0 <- slope / (GAP_conc * 0.001)
   data$percent_fit <- percent_fit
   ## label the initial points used for fitting
   data <- data %>% 
-    mutate("initial_linear" = ifelse(observed < cutoff_fluo, "initial_linear", "all")) %>% 
+    mutate("initial_linear" = ifelse(product_conc < cutoff_fluo, "initial_linear", "all")) %>% 
     mutate("predicted" = ifelse(predicted < max_flo, predicted, NA))
   ### calculate the initial rate
-  data$vf0 <- - slope / (data$GAP_conc[1] * 0.001)  ### initial rate in fluorescence units
   return(data)
 }
 run_nls <- function(data) {
   data <- data %>% 
     filter(Time < cutoff_time)
-  #max_flo <- max(data$observed, na.rm = T)
-  #t_at_max <- data$Time[data$observed == max_flo]
+  #max_flo <- max(data$product_conc, na.rm = T)
+  #t_at_max <- data$Time[data$product_conc == max_flo]
   #data <- data %>% 
    # filter(Time < t_at_max)
   c0 <- data$conc[1]
   GAP_conc <- data$GAP_conc[1]
+  #### starting parameter estimates
+  f0_start <- data %>% pull(intercept) %>% unique()
+  f_plat_start <- data %>% pull(f_plateau_est) %>% unique()
+  k_start <- data %>% pull(k_est) %>% unique()
   start <- list(
-    f0 = min(data$observed, na.rm = T),
-    f_plat = max(data$observed, na.rm = T),
-    k = 1e-2
+    f0 = f0_start,
+    f_plat = f_plat_start,
+    k = k_start
     )
   lower <- c(
-    min(0.7 * min(data$observed, na.rm = T), 1.2 * min(data$observed, na.rm = T)),
-    0.8 * (max(data$observed, na.rm = T)),
-    1e-5
+    0.9 * f0_start,
+    0.9 * f_plat_start,
+    0.9 * k_start
     )
   upper <- c(
-    max(0.7 * min(data$observed, na.rm = T), 1.2 * min(data$observed, na.rm = T)),
-    1.3 * max(data$observed, na.rm = T),
-    1
+    1.1 * f0_start,
+    1.1 * f_plat_start,
+    1.1 * k_start
     )
   # f0 + (f_plat - f0) * (1 - exp(-k * Time))
-  out <- nlsLM(observed ~ f0 + (f_plat - f0) * (1 - exp(-k * Time)),
+  out <- nlsLM(product_conc ~ f0 + (f_plat - f0) * (1 - exp(-k * Time)),
                data = data,
                start = start,
                lower = lower,
@@ -131,7 +135,7 @@ run_nls <- function(data) {
   data$span_pval <- log10(summary(out)$coefficients[,4][2])
   data$k_pval <- log10(summary(out)$coefficients[,4][4])
   ### calculate the initial rate
-  data$vf0 = (span * k) / (GAP_conc * 0.001) ### initial rate in fluorescence units
+  data$v0 = (span * k) / (GAP_conc * 0.001) ### initial rate in fluorescence units
   return(data)
 }
 
@@ -149,15 +153,15 @@ plot_fits <- function(data, output = getwd()) {
       
       if (fit == "exp") {
         title <- condition_data %>% 
-          select(condition, pearsonr, k, span, vf0) %>% 
+          select(condition, pearsonr, k, span, v0) %>% 
           unique() %>%
           mutate("title" = str_c("exp fit\n", condition, "R =", round(pearsonr, 2), "k =", round(k, 4), "span =", round(span, 0), sep = " ")) %>% 
           pull(title)
       data_to_plot <- condition_data %>% 
-        select(Time, observed, predicted) %>% 
+        select(Time, product_conc, predicted) %>% 
         gather(`curve type`, value, -Time)
-      plots[[i]] <- ggplot(data_to_plot[data_to_plot[["curve type"]] != "observed", ], mapping = aes(x = Time, y = value, color = `curve type`)) +
-          geom_point(data = data_to_plot[data_to_plot[["curve type"]] == "observed", ], color = "black", alpha = 0.5) + 
+      plots[[i]] <- ggplot(data_to_plot[data_to_plot[["curve type"]] != "product_conc", ], mapping = aes(x = Time, y = value, color = `curve type`)) +
+          geom_point(data = data_to_plot[data_to_plot[["curve type"]] == "product_conc", ], color = "black", alpha = 0.5) + 
           geom_line() + ylab("fluorescence") +
           scale_color_viridis(discrete = TRUE) +
           theme_bw() +
@@ -171,9 +175,9 @@ plot_fits <- function(data, output = getwd()) {
         slope <- condition_data %>% pull(slope) %>% unique()
         intercept <- condition_data %>% pull(intercept) %>% unique()
         data_to_plot <- condition_data %>% 
-          select(Time, initial_linear, observed) %>% 
+          select(Time, initial_linear, product_conc) %>% 
           mutate("data" = initial_linear)
-        plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = observed, color = data)) +
+        plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = product_conc, color = data)) +
           geom_point(alpha = 0.5) + 
           geom_abline(slope = slope, intercept = intercept) + ylab("fluorescence") +
           scale_color_viridis(discrete = TRUE) +
@@ -200,8 +204,7 @@ if (length(exp_fits) > 0) {
     filter(fit == "exp") %>% 
     group_by(sample, condition) %>%
     do(run_nls(.)) %>%  # fit curve
-    ungroup() %>% 
-    mutate("v0" = vf0/cal_slope)
+    ungroup() 
 }
 
 lin_fits <- dataset %>% 
@@ -211,8 +214,7 @@ if (length(lin_fits) > 0) {
     filter(fit == "lin") %>% 
     group_by(condition) %>%
     do(run_linear(.)) %>%  # linear fit
-    ungroup() %>% 
-    mutate("v0" = -1 * vf0/cal_slope)
+    ungroup()
 }
 
 if (length(lin_fits) > 0 & length(exp_fits) > 0) {
@@ -223,7 +225,7 @@ if (length(lin_fits) > 0 & length(exp_fits) > 0) {
   processed.data <- processed.data_lin
 }
 
-processed.data %>% ggplot(aes(x = conc, y = v0, color = row, shape = as.character(sensor_conc))) + 
+processed.data %>% ggplot(aes(x = conc, y = v0, color = sample, shape = as.character(sensor_conc))) + 
   geom_point()
 #write_tsv(processed.data, file.path(output, "fit_data.txt"))
 plot_fits(processed.data, output = output)
@@ -233,6 +235,6 @@ plot_fits(processed.data, output = output)
 
 dataset %>% 
   filter(Time < 750 & sample == "PE1_WT") %>% 
-  ggplot(aes(Time, observed, color = conc)) + 
+  ggplot(aes(Time, product_conc, color = conc)) + 
   geom_point() + facet_wrap(~sensor_conc) +
   scale_color_viridis()
