@@ -155,14 +155,14 @@ plot_fits <- function(data, output = getwd()) {
         title <- condition_data %>% 
           select(condition, pearsonr, k, span, v0) %>% 
           unique() %>%
-          mutate("title" = str_c("exp fit\n", condition, "R =", round(pearsonr, 2), "k =", round(k, 4), "span =", round(span, 0), sep = " ")) %>% 
+          mutate("title" = str_c("exp fit\n", condition, "k =", round(k, 4), "span =", round(span, 3), sep = " ")) %>% 
           pull(title)
       data_to_plot <- condition_data %>% 
         select(Time, product_conc, predicted) %>% 
         gather(`curve type`, value, -Time)
       plots[[i]] <- ggplot(data_to_plot[data_to_plot[["curve type"]] != "product_conc", ], mapping = aes(x = Time, y = value, color = `curve type`)) +
           geom_point(data = data_to_plot[data_to_plot[["curve type"]] == "product_conc", ], color = "black", alpha = 0.5) + 
-          geom_line() + ylab("fluorescence") +
+          geom_line() + ylab("product (free Pi) concentration") +
           scale_color_viridis(discrete = TRUE) +
           theme_bw() +
           ggtitle(title)
@@ -170,7 +170,7 @@ plot_fits <- function(data, output = getwd()) {
         
         title <- condition_data %>% 
           select(condition, slope, intercept) %>% 
-          mutate("title" = str_c("linear fit\n", condition,  "slope =", round(slope, 1), sep = " ")) %>% 
+          mutate("title" = str_c("linear fit\n", condition,  "slope =", round(slope, 4), sep = " ")) %>% 
           pull(title) %>% unique()
         slope <- condition_data %>% pull(slope) %>% unique()
         intercept <- condition_data %>% pull(intercept) %>% unique()
@@ -179,7 +179,7 @@ plot_fits <- function(data, output = getwd()) {
           mutate("data" = initial_linear)
         plots[[i]] <- ggplot(data_to_plot, mapping = aes(x = Time, y = product_conc, color = data)) +
           geom_point(alpha = 0.5) + 
-          geom_abline(slope = slope, intercept = intercept) + ylab("fluorescence") +
+          geom_abline(slope = slope, intercept = intercept) + ylab("product (free Pi) concentration") +
           scale_color_viridis(discrete = TRUE) +
           theme_bw() +
           ggtitle(title)
@@ -225,7 +225,9 @@ if (length(lin_fits) > 0 & length(exp_fits) > 0) {
   processed.data <- processed.data_lin
 }
 
-processed.data %>% ggplot(aes(x = conc, y = v0, color = sample, shape = as.character(sensor_conc))) + 
+processed.data %>% 
+  filter(sample == "PE20_K132H") %>% 
+  ggplot(aes(x = conc, y = v0, color = sample, shape = as.character(sensor_conc))) + 
   geom_point()
 #write_tsv(processed.data, file.path(output, "fit_data.txt"))
 plot_fits(processed.data, output = output)
