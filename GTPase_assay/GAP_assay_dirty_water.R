@@ -8,17 +8,17 @@ SubstrateDilute <- function(stock, work, volume, Mw) {
 }
 
 ### Set up  experiment parameters
-plate <- 4
-row <- "A"
-date <- "20190123"
-Rans <- c("PE20_K132H", "PE28_K101R")
+plate <- 5
+row <- "C"
+date <- "20190201"
+Rans <- c("PE1_WT")
 #sensor.working <- 10 # uM
 
 outdir <- "GTPase_assay/"
 GAPs <- c("SpRNA1")
-GAP.stock <- 25  # nM
-GAP.working <- 1 # nM
-Rans.stock.conc <- c(28.87, 30.04)
+GAP.stock <- 2  # nM
+GAP.working <- 0.08 # nM
+Rans.stock.conc <- c(38.51)
 sensor <- c('sensor')
 sensor.stock.conc <- 125
 reaction.volume <- 100 # ul
@@ -31,8 +31,9 @@ final.Ran.conc <- list()
 #final.Ran.conc[[1]] = c(1, 2, 4, 6, 8, 12)
 #final.Ran.conc[[1]] = c(1.5, 3, 3, 5, 7, 9, 11, 15)
 
-final.Ran.conc[[1]] = c(.5, .75, 1, 2, 3, 4, 5, 6, 8, 10, 11, 12)
-final.Ran.conc[[2]] = c(.5, .75, 1, 2, 3, 4, 5, 6, 8, 10, 11, 12)
+#final.Ran.conc[[1]] = c(.25, .5, .75, 1, 1.25, 1.5, 2, 0, 4, 6, 10, 0)
+#final.Ran.conc[[1]] = c(.25, 0.25, 0.5, 0.75, 0.75, 1, 1, 1.25, 1.5, 1.75, 2, 0, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 0)
+final.Ran.conc[[1]] = c(.25, 1, 1.5, 2, 0, 4, 6, 8, 10, 12, 15, 0, .5, 0.75, 1.25, 1.75, 0, 3, 5, 7, 9, 13, 17, 0)
 
 
 
@@ -49,7 +50,7 @@ for (i in 1:length(Rans)) {
     fin.Ran.conc <- final.Ran.conc[[i]][j]
     if (fin.Ran.conc < 3) {
       sensor.working <- 10 # uM
-    } else if (fin.Ran.conc < 13) {
+    } else if (fin.Ran.conc < 18) {
       sensor.working <- 20
     } else {
       sensor.working <- 30

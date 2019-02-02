@@ -10,6 +10,7 @@
 library(shiny)
 library(tidyverse)
 library(minpack.lm)
+library(lubridate)
 remove(list = ls())
 
 # create output directory
@@ -130,13 +131,14 @@ server <- function(input, output, session) {
   
   observe({
     d <- filter(dataset, sample == input$sample, condition == input$condition)
+    conc <- filter(dataset, condition == input$condition) %>% pull(conc) %>% unique()
     max_product <- max(d$product_conc, na.rm = T)
-    min_product_f0 <- round(min(1.3 * min(d$product_conc, na.rm = T) , 0.5 * min(d$product_conc, na.rm = T) , - 0.1), 3)
-    max_product_f0 <- round(max(1.3 * min(d$product_conc, na.rm = T) , 0.5 * min(d$product_conc, na.rm = T) , 0.1), 3)
+    min_product_f0 <- round(min(1.2 * min(d$product_conc, na.rm = T) , 0.75 * min(d$product_conc, na.rm = T) , - 0.1), 3)
+    max_product_f0 <- round(max(1.2 * min(d$product_conc, na.rm = T) , 0.75 * min(d$product_conc, na.rm = T) , 0.1), 3)
     updateSliderInput(session, "cutoff_time", min = 0, max = max(d$Time, na.rm=T), value = max(d$Time, na.rm = T), step = 5)
-    updateSliderInput(session, "f0_c", min = -1, max = 2, value = c(min_product_f0, max_product_f0))
-    updateSliderInput(session, "f_plat_c", min = round(0.5 * max_product, 3), max = round(2 * max_product, 3), value = c(round(0.5 * max_product, 3), round(2 * max_product, 3)))
-    updateSliderInput(session, "k_c", min = -7, max = 1, value = c(-4, -1), step = 0.1)
+    updateSliderInput(session, "f0_c", min = -0.3 * conc, max = 0.3 * conc, value = c(min_product_f0, max_product_f0))
+    updateSliderInput(session, "f_plat_c", min = round(0.75 * max_product, 3), max = round(1.5 * conc, 3), value = c(round(0.75 * max_product, 3), round(1.25 * max_product, 3)))
+    updateSliderInput(session, "k_c", min = -7, max = 1, value = c(-4, -2), step = 0.1)
     updateSliderInput(session, "percent_fit", min = 0.01, max = 0.4, value = 0.1, step = 0.01)
   })
   

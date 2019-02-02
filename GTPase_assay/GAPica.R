@@ -3,8 +3,9 @@ library(tidyverse)
 library(viridis)
 library(lubridate)
 calibration <- tibble("sensor_conc" = c(10, 20), 
-                      "cal_slope" = c(3465, 2667), 
-                      "cal_intercept" = c(3445, 5259))
+                      "cal_slope" = c(0.0002841, 0.0003713), 
+                      "cal_intercept" = c(-0.0014423, 0.1462813))
+deadtime <- 30
 ## READ and FORMAT the raw ASCII data from Synergy H1
 ####### a function to read in all the biotek files, gather the data and reformat the time columns
 read_and_gather <- function(file) {
@@ -29,10 +30,17 @@ read_and_gather <- function(file) {
     select(-data_file) %>% 
     inner_join(., data_gathered, by = "well") %>% 
     mutate("row" = str_sub(well, 1, 1), "column" = str_sub(well, 2)) %>% 
-    mutate("condition" = str_c(date, sample, well, conc, GAP_conc, sensor_conc, sep = "-")) %>% 
+    mutate("condition" = str_c(date, sample, well, conc, GAP_conc, sensor_conc, sep = "-")) 
+  buffer_blanks <- data %>% filter(conc == 0) %>% 
+    select(sensor_conc, Time, fluorescence)
+  data <- data %>% filter(conc != 0) %>% 
+    inner_join(., buffer_blanks, by = c("sensor_conc", "Time")) %>% 
+    mutate("fluorescence" = fluorescence.x - fluorescence.y) %>% 
+    rename("raw_fluo" = fluorescence.x, "background_fluo" = fluorescence.y) %>% 
     inner_join(., calibration, by = "sensor_conc") %>% 
-    mutate("product_conc" = as.integer(fluorescence - cal_intercept)/cal_slope) %>% 
-    filter(! is.na(fluorescence))
+    mutate("product_conc" = as.integer(fluorescence)*cal_slope + cal_intercept) %>% 
+    filter(! is.na(fluorescence)) %>% 
+    mutate("Time" = Time + deadtime)
   return(data)
 }
 
@@ -45,11 +53,18 @@ files <- index %>%
 ### read in the data files, join them with the info from the index file and make them tidy
 #data_points_to_discard <- read_tsv("GEF_assay/2018_data/data_to_discard.txt")
 ( dataset <- do.call("bind_rows", lapply(files, FUN = read_and_gather)) )
+
+dataset %>% 
+  filter( (conc > 5 & conc < 10) | conc == 0) %>% 
+  ggplot(aes(Time, fluorescence, color = as.character(conc))) + 
+  geom_point()
+
 write_tsv(dataset, path = outfile)
 
 
-
 run_linear <- function(data) {
+  condition <- data %>% pull(condition) %>% unique()
+  print(condition)
   GAP_conc <- data$GAP_conc[1]
   start_intercept <- data %>% pull(intercept) %>% unique()
   percent_fit <- data %>% pull(percent_fit) %>% unique()
@@ -76,12 +91,13 @@ run_linear <- function(data) {
   return(data)
 }
 run_nls <- function(data) {
-  data <- data %>% 
-    filter(Time < cutoff_time)
-  #max_flo <- max(data$product_conc, na.rm = T)
-  #t_at_max <- data$Time[data$product_conc == max_flo]
-  #data <- data %>% 
-   # filter(Time < t_at_max)
+  condition <- data %>% pull(condition) %>% unique()
+  print(condition)
+  cutoff_time <- data %>% pull(cutoff_time) %>% unique()
+  if(! is.na(cutoff_time)) {
+    data <- data %>% 
+      filter(Time < cutoff_time)
+  }
   c0 <- data$conc[1]
   GAP_conc <- data$GAP_conc[1]
   #### starting parameter estimates
@@ -193,7 +209,7 @@ plot_fits <- function(data, output = getwd()) {
 }
 
 today <- gsub('-', '', today(tzone="US/Pacific")) # set date, for filenaming purposes
-output <- str_c("GTPase_assay/", today, '_output', '/')
+output <- str_c("GTPase_assay/", today, 'GAP_output', '/')
 dir.create(output, showWarnings = FALSE)
 
 
@@ -226,8 +242,9 @@ if (length(lin_fits) > 0 & length(exp_fits) > 0) {
 }
 
 processed.data %>% 
-  filter(sample == "PE20_K132H") %>% 
-  ggplot(aes(x = conc, y = v0, color = sample, shape = as.character(sensor_conc))) + 
+  select(condition, conc, v0, row, sensor_conc) %>% 
+  unique() %>% 
+  ggplot(aes(x = conc, y = v0, color = row, shape = as.character(sensor_conc))) + 
   geom_point()
 #write_tsv(processed.data, file.path(output, "fit_data.txt"))
 plot_fits(processed.data, output = output)

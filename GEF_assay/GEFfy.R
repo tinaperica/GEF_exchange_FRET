@@ -475,13 +475,13 @@ plot_MM_bins <- function(data, output = getwd()) {
 
 #### set output directory
 today <- gsub('-', '', today(tzone="US/Pacific")) # set date, for filenaming purposes
-output <- str_c(today, '_output', '/')
+output <- str_c(today, '_GEF_output', '/')
 dir.create(output, showWarnings = FALSE)
 
 ### first plot raw data for everything
 #plot_raw_data(dataset, by_sample = T, output = output)
 
-dataset <- dataset %>% filter(sample == "PE39_A180T")
+#dataset <- dataset %>% filter(sample == "PE39_A180T")
 #### Fit data assuming photobleaching decay is exponential, with observations in fluorescence units
 exp_fits <- dataset %>% 
   filter(fit == "exp") %>% pull(sample) %>% unique()
@@ -589,7 +589,7 @@ MM.data %>%
   ylab("kcat / Km") +
   theme(text = element_text(size=20), axis.text.x = element_text(angle = 45, hjust = 1))
 
-
+ggsave(filename = file.path(output, "kcat_over_Km.pdf"), width = 10)
 mut_ordered_by_kcat <- MM.data %>% select(mutant, kcat) %>% arrange(kcat) %>% unique() %>% pull(mutant)
 MM.data %>% 
   #filter(sample != "PE16_R108I" & sample != "PE4_R108L" & sample != "PE18_R108Y" & sample != "PE26_R108Q"
@@ -601,6 +601,7 @@ MM.data %>%
   ggplot(aes(mutant, kcat)) + geom_bar(stat = "identity") + 
   geom_errorbar(aes(ymin = kcat - kcat_sd, ymax = kcat + kcat_sd), width = 0.5) +
   theme(text = element_text(size=20), axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(filename = file.path(output, "kcat.pdf"), width = 10)
 
 mut_ordered_by_kM <- MM.data %>% select(mutant, Km) %>% arrange(Km) %>% unique() %>% pull(mutant)
 MM.data %>% 
@@ -611,6 +612,7 @@ MM.data %>%
   ggplot(aes(mutant, Km)) + geom_bar(stat = "identity") + 
   geom_errorbar(aes(ymin = Km - Km_sd, ymax = Km + Km_sd), width = 0.5) +
   theme(text = element_text(size=20), axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(filename = file.path(output, "Km.pdf"), width = 10)
 
 mut_ordered_by_kM <- MM.data %>% select(mutant, Km) %>% arrange(Km) %>% unique() %>% pull(mutant)
 MM.data %>% 
@@ -631,4 +633,5 @@ MM.data %>%
   geom_text_repel() +
   ylab(label = "ln(Km)") +
   labs(size = 'kcat/Km std.dev') 
+ggsave(filename = file.path(output, "Km_kcat_scatterplot.pdf"), width = 13)
 

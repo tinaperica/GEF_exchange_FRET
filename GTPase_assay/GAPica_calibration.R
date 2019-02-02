@@ -38,7 +38,7 @@ files <- index %>%
 ### read in the data files, join them with the info from the index file and make them tidy
 #data_points_to_discard <- read_tsv("GEF_assay/2018_data/data_to_discard.txt")
 ( calibration_data <- do.call("bind_rows", lapply(files, FUN = read_and_gather)) )
-
+calibration_data %>% pull(Pi_conc) %>% unique()
 write_tsv(calibration_data, path = outfile)
 calibration_data <- calibration_data %>% 
   filter(date == "20181205")
@@ -56,20 +56,20 @@ calibration_data %>%
   filter(sensor_conc == 10) %>% 
   ggplot(aes(x = Time, y = fluorescence, color = row)) + geom_point()
 
-calibration_data %>% ggplot(aes(x = Pi_conc, y = fluorescence, color = as.character(sensor_conc))) + 
+calibration_data %>% ggplot(aes(x = fluorescence, y = Pi_conc, color = as.character(sensor_conc))) + 
   geom_point() +
   scale_color_viridis(discrete = TRUE) +
   theme_bw()
 
-low_sensor_fit <- lm(fluorescence ~ Pi_conc, data = calibration_data[calibration_data$sensor_conc == 10 & calibration_data$Pi_conc < 3,])
-high_sensor_fit <- lm(fluorescence ~ Pi_conc, data = calibration_data[calibration_data$sensor_conc == 20 & calibration_data$Pi_conc < 10,])
+low_sensor_fit <- lm(Pi_conc ~ norm_fluor, data = calibration_data[calibration_data$sensor_conc == 10 & calibration_data$Pi_conc < 3,])
+high_sensor_fit <- lm(Pi_conc ~ norm_fluor, data = calibration_data[calibration_data$sensor_conc == 20 & calibration_data$Pi_conc < 10,])
 calibration_data <- tibble("sensor_conc" = c(10, 20), 
                    "slope" = c(low_sensor_fit$coefficients[2], high_sensor_fit$coefficients[2]),
                    "intercept" = c(low_sensor_fit$coefficients[1], high_sensor_fit$coefficients[1])) %>% 
   inner_join(., calibration_data, by = "sensor_conc")
 calibration_data %>% 
   filter(sensor_conc == 20) %>% 
-  ggplot(aes(x = Pi_conc, y = fluorescence, color = as.character(sensor_conc))) + 
+  ggplot(aes(x = Pi_conc, y = norm_fluor, color = as.character(sensor_conc))) + 
   geom_point() + 
   geom_abline(aes(slope = slope, intercept = intercept, color = as.character(sensor_conc))) +
   scale_color_viridis(discrete = TRUE) +
