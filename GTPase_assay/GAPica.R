@@ -5,7 +5,7 @@ library(lubridate)
 calibration <- tibble("sensor_conc" = c(10, 20), 
                       "cal_slope" = c(0.0002841, 0.0003713), 
                       "cal_intercept" = c(-0.0014423, 0.1462813))
-deadtime <- 30
+deadtime <- 0
 ## READ and FORMAT the raw ASCII data from Synergy H1
 ####### a function to read in all the biotek files, gather the data and reformat the time columns
 read_and_gather <- function(file) {
@@ -32,15 +32,35 @@ read_and_gather <- function(file) {
     mutate("row" = str_sub(well, 1, 1), "column" = str_sub(well, 2)) %>% 
     mutate("condition" = str_c(date, sample, well, conc, GAP_conc, sensor_conc, sep = "-")) 
   buffer_blanks <- data %>% filter(conc == 0) %>% 
-    select(sensor_conc, Time, fluorescence)
-  data <- data %>% filter(conc != 0) %>% 
+    select(sensor_conc, Time, fluorescence) %>% 
+    arrange(Time) %>% 
+    group_by(Time) %>% 
+    mutate("fluorescence" = mean(fluorescence)) %>% 
+    ungroup() %>% unique()
+  no_GAP_blank <- data %>% filter(GAP_conc == 0 & conc != 0) %>% 
+    select(sample, conc, sensor_conc, Time, fluorescence) %>% 
     inner_join(., buffer_blanks, by = c("sensor_conc", "Time")) %>% 
     mutate("fluorescence" = fluorescence.x - fluorescence.y) %>% 
-    rename("raw_fluo" = fluorescence.x, "background_fluo" = fluorescence.y) %>% 
+    rename("raw_fluo" = fluorescence.x, "buffer_background_fluo" = fluorescence.y) %>% 
+    filter(Time < 100) %>% 
+    group_by(sample, conc, sensor_conc) %>% 
+    summarise("mean_no_GAP_fluorescence" = mean(fluorescence)) %>% 
+    ungroup()
+  data <- data %>% #filter(conc != 0) %>% 
+    inner_join(., buffer_blanks, by = c("sensor_conc", "Time")) %>% 
+    mutate("fluorescence" = fluorescence.x - fluorescence.y) %>% 
+    rename("raw_fluo" = fluorescence.x, "buffer_background_fluo" = fluorescence.y) %>% 
+    inner_join(., no_GAP_blank, by = c("sample", "conc", "sensor_conc")) %>% 
+    mutate("corrected_fluorescence" = fluorescence - mean_no_GAP_fluorescence) %>% 
+    #rename("fluorescence" = fluorescence.x, "noGAP_fluo" = fluorescence.y, 
+     #      "raw_fluo" = raw_fluo.x, "noGAPraw_fluo" = raw_fluo.y, "buffer_background_fluo" = buffer_background_fluo.x) %>% 
+    #select(-buffer_background_fluo.y) %>% 
     inner_join(., calibration, by = "sensor_conc") %>% 
-    mutate("product_conc" = as.integer(fluorescence)*cal_slope + cal_intercept) %>% 
+    group_by(sample) %>% 
+    mutate("product_conc" = as.integer(corrected_fluorescence)*cal_slope + cal_intercept) %>% 
     filter(! is.na(fluorescence)) %>% 
-    mutate("Time" = Time + deadtime)
+    mutate("Time" = Time + deadtime) %>% 
+    ungroup()
   return(data)
 }
 
@@ -54,9 +74,22 @@ files <- index %>%
 #data_points_to_discard <- read_tsv("GEF_assay/2018_data/data_to_discard.txt")
 ( dataset <- do.call("bind_rows", lapply(files, FUN = read_and_gather)) )
 
+
+
 dataset %>% 
-  filter( (conc > 5 & conc < 10) | conc == 0) %>% 
-  ggplot(aes(Time, fluorescence, color = as.character(conc))) + 
+  ggplot(aes(Time, raw_fluo, color = as.character(GAP_conc))) + 
+  geom_point()
+
+dataset %>% 
+  ggplot(aes(Time, fluorescence, color = as.character(GAP_conc))) + 
+  geom_point()
+
+dataset %>% 
+  ggplot(aes(Time, corrected_fluorescence, color = as.character(GAP_conc))) + 
+  geom_point()
+
+dataset %>% 
+  ggplot(aes(Time, product_conc, color = as.character(GAP_conc))) + 
   geom_point()
 
 write_tsv(dataset, path = outfile)
@@ -247,6 +280,7 @@ processed.data %>%
   ggplot(aes(x = conc, y = v0, color = row, shape = as.character(sensor_conc))) + 
   geom_point()
 #write_tsv(processed.data, file.path(output, "fit_data.txt"))
+
 plot_fits(processed.data, output = output)
 
 
@@ -257,3 +291,18 @@ dataset %>%
   ggplot(aes(Time, product_conc, color = conc)) + 
   geom_point() + facet_wrap(~sensor_conc) +
   scale_color_viridis()
+
+
+
+test_fit <- read_tsv("GTPase_assay/test_fit.txt") %>% 
+  mutate("row" = str_sub(well, 1, 1), "column" = str_sub(well, 2)) %>% 
+  mutate("v0" = slope / (0.001 * GAP_conc))
+test_fit %>% ggplot(aes(conc, v0, color = as.character(conc), shape = row)) + geom_point() +
+  ylim(c(0, 10))
+
+
+fits <- tibble("slope" = c(0.0012,0.0011, 0.0005, 0.0004, 0.0015, 0.0010, 0.0006, 0.0005, 0.0001, 0.0001),  ## slopes are in uM s-1
+               "GAPconc" = c(0.1904, 0.1904, 0.0952, 0.0952, 0.1904, 0.1904, 0.0952, 0.0952, 0, 0)) %>% 
+  mutate("kobs" = slope / 5)
+fits %>% ggplot(aes(GAPconc, slope)) + geom_point()
+lm.fit <- lm(slope ~ GAPconc, data = fits)

@@ -54,9 +54,9 @@ calibration_data <- calibration_data %>%
 
 calibration_data %>% 
   filter(sensor_conc == 10) %>% 
-  ggplot(aes(x = Time, y = fluorescence, color = row)) + geom_point()
+  ggplot(aes(x = Time, y = norm_fluor, color = row)) + geom_point()
 
-calibration_data %>% ggplot(aes(x = fluorescence, y = Pi_conc, color = as.character(sensor_conc))) + 
+calibration_data %>% ggplot(aes(x = norm_fluor, y = Pi_conc, color = as.character(sensor_conc))) + 
   geom_point() +
   scale_color_viridis(discrete = TRUE) +
   theme_bw()
@@ -69,7 +69,9 @@ calibration_data <- tibble("sensor_conc" = c(10, 20),
   inner_join(., calibration_data, by = "sensor_conc")
 calibration_data %>% 
   filter(sensor_conc == 20) %>% 
-  ggplot(aes(x = Pi_conc, y = norm_fluor, color = as.character(sensor_conc))) + 
+  group_by(Pi_conc) %>% 
+  mutate("mean_fluorescence" = mean(fluorescence)) %>% 
+  ggplot(aes(x = Pi_conc, y = mean_fluorescence, color = as.character(sensor_conc))) + 
   geom_point() + 
   geom_abline(aes(slope = slope, intercept = intercept, color = as.character(sensor_conc))) +
   scale_color_viridis(discrete = TRUE) +

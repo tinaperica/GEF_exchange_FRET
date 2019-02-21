@@ -1,0 +1,25 @@
+sample	well	conc	GAP_conc	sensor_conc	date	fit	cutoff_time	intercept	percent_fit	slope	k_est	f_plateau_est	data_file
+PE1_WT	C1	0.25	0.0968	10	20190201	exp		-0.0426			0.0008	0.1646	GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C2	1	0.0968	10	20190201	lin		0.011	0.1	0.0003			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C3	1.5	0.0968	10	20190201	lin		0.057	0.68	0.0004			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C4	2	0.0968	10	20190201	lin		0.034	0.69	0.0005			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C5	0	0.0968	10	20190201	exp							GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C6	4	0.0968	20	20190201	lin		0.3125	0.9	0.0004			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C7	6	0.0968	20	20190201	lin		0.354	0.9	0.0005			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C8	8	0.0968	20	20190201	lin		0.4405	0.9	0.0006			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C9	10	0.0968	20	20190201	lin		0.524	0.9	0.0007			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C10	12	0.0968	20	20190201	lin		0.521	0.9	0.0009			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C11	15	0.0968	20	20190201	lin		0.7305	0.9	0.0008			GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	C12	0	0.0968	20	20190201	exp							GTPase_assay/2018_data/20190201_GAP_assay.txt
+PE1_WT	E1	0.5	0.0968	10	20190201	exp		-0.056			0.0008	0.376	GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E2	0.75	0.0968	10	20190201	exp		-0.086			0.0005	0.589	GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E3	1.25	0.0968	10	20190201	lin		0.052	0.84	0.0003			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E4	1.75	0.0968	10	20190201	lin		0.081	1	0.0003			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E5	0	0	10	20190201	exp							GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E6	3	0.0968	20	20190201	lin		0.306	0.9	0.0004			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E7	5	0.0968	20	20190201	lin		0.4235	1	0.0003			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E8	7	0.0968	20	20190201	lin		0.5615	1	0.0004			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E9	9	0.0968	20	20190201	lin		0.6925	1	0.0005			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E10	13	0.0968	20	20190201	lin		0.9185	1	0.0005			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E11	17	0.0968	20	20190201	lin		1.18	1	0.0006			GTPase_assay/2018_data/20190201_GAP_assay2.txt
+PE1_WT	E12	0	0	20	20190201	exp							GTPase_assay/2018_data/20190201_GAP_assay2.txt

@@ -1,0 +1,33 @@
+well	sample	conc
+E2	A	25
+E3	B	20
+E4	C	15
+E5	D	10
+E6	E	5
+E7	F	2.5
+E8	G	0
+E9	buffer	0
+E10	100 nM GAP	
+F2	A	25
+F3	B	20
+F4	C	15
+F5	D	10
+F6	E	5
+F7	F	2.5
+F8	G	0
+F9	buffer	0
+F10	100 nM GAP	
+G2	A	25
+G3	B	20
+G4	C	15
+G5	D	10
+G6	E	5
+G7	F	2.5
+G8	G	0
+G9	buffer	0
+G10	100 nM GAP
+H6	E	5
+H7	F	2.5
+H8	G	0
+H9	buffer	0
+H10	100 nM GAP	

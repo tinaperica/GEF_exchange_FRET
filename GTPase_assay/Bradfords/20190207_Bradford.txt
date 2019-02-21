@@ -1,0 +1,64 @@
+
+
+Software Version	3.03.14
+
+
+
+Experiment File Path:	C:\Users\Public\Documents\Experiments\Tina\20190207_Bradford.xpt
+Protocol File Path:	C:\Users\Public\Documents\Protocols\Tina\Bradford.prt
+
+
+
+Plate Number	Plate 1
+Date	2/7/2019
+Time	11:11:03 AM
+Reader Type:	Synergy H1
+Reader Serial Number:	1803011C
+Reading Type	Reader
+
+Procedure Details
+
+Plate Type	96 WELL PLATE
+Eject plate on completion	
+Read	Absorbance Endpoint
+	D2..F10
+	Wavelengths:  595, 450
+	Read Speed: Normal,  Delay: 100 msec,  Measurements/Data Point: 8
+
+Layout
+	1	2	3	4	5	6	7	8	9	10	11	12
+A													Well ID
+B													Well ID
+C													Well ID
+D		SPL1	SPL4	SPL7	SPL10	SPL13	SPL16	SPL19	SPL22	SPL25			Well ID
+E		SPL2	SPL5	SPL8	SPL11	SPL14	SPL17	SPL20	SPL23	SPL26			Well ID
+F		SPL3	SPL6	SPL9	SPL12	SPL15	SPL18	SPL21	SPL24	SPL27			Well ID
+G													Well ID
+H													Well ID
+
+
+
+Actual Temperature:	21.3
+
+
+
+Actual Temperature:	21.3
+
+Results
+	1	2	3	4	5	6	7	8	9	10	11	12
+A													595
+													450
+B													595
+													450
+C													595
+													450
+D		0.571	0.546	0.506	0.470	0.407	0.372	0.329	0.354	0.424			595
+		0.376	0.382	0.397	0.421	0.444	0.455	0.468	0.456	0.436			450
+E		0.635	0.630	0.558	0.505	0.426	0.376	0.326	0.350	0.440			595
+		0.343	0.336	0.363	0.381	0.403	0.429	0.445	0.431	0.402			450
+F		0.777	0.722	0.647	0.557	0.448	0.382	0.336	0.344	0.484			595
+		0.273	0.291	0.314	0.340	0.379	0.404	0.420	0.409	0.352			450
+G													595
+													450
+H													595
+													450

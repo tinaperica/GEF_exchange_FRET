@@ -8,17 +8,17 @@ SubstrateDilute <- function(stock, work, volume, Mw) {
 }
 
 ### Set up  experiment parameters
-plate <- 5
-row <- "C"
-date <- "20190201"
-Rans <- c("PE1_WT")
+plate <- 7
+row <- "E"
+date <- "20190220"
+Rans <- c("PE3_T34E")
 #sensor.working <- 10 # uM
 
 outdir <- "GTPase_assay/"
 GAPs <- c("SpRNA1")
-GAP.stock <- 2  # nM
-GAP.working <- 0.08 # nM
-Rans.stock.conc <- c(38.51)
+GAP.stock <- 10  # nM
+GAP.working <- 1 # nM
+Rans.stock.conc <- c(58)
 sensor <- c('sensor')
 sensor.stock.conc <- 125
 reaction.volume <- 100 # ul
@@ -33,7 +33,9 @@ final.Ran.conc <- list()
 
 #final.Ran.conc[[1]] = c(.25, .5, .75, 1, 1.25, 1.5, 2, 0, 4, 6, 10, 0)
 #final.Ran.conc[[1]] = c(.25, 0.25, 0.5, 0.75, 0.75, 1, 1, 1.25, 1.5, 1.75, 2, 0, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15, 0)
-final.Ran.conc[[1]] = c(.25, 1, 1.5, 2, 0, 4, 6, 8, 10, 12, 15, 0, .5, 0.75, 1.25, 1.75, 0, 3, 5, 7, 9, 13, 17, 0)
+final.Ran.conc[[1]] = c(16, 16, 16, 8, 8)
+
+
 
 
 
@@ -66,7 +68,7 @@ for (i in 1:length(Rans)) {
     
     
     Ran.premix.buffer.volume <- round(Ran.premix.volume - Ran.volume - sensor.V) 
-    reaction.mix.table <- rbind(reaction.mix.table, data.frame(plate, "well" = paste0(row, well_count), prot, fin.Ran.conc, Ran.volume, Ran.volume/2, 
+    reaction.mix.table <- rbind(reaction.mix.table, data.frame(plate, "well" = paste0(row, well_count), prot, fin.Ran.conc, Ran.volume, 
                                                               sensor.V, Ran.premix.buffer.volume, 
                                                               GAP.stock, GAP.working, 
                                                               Ran.premix.to.add, GAP.V, date))
@@ -81,7 +83,7 @@ write.table(reaction.mix.table, file = paste0(outdir, "reaction_mix_temp.txt"), 
     summarise( "total_Ran_V" = sum(Ran.volume)) )
 (sensor.volume.sum <- reaction.mix.table %>%
     group_by(prot) %>% 
-    summarise( "total_diluted_125mM_sensor_V" = 1.1 * sum(sensor.V)) )   ### prepare 10 % extra diluted sensor
+    summarise( "total_diluted_125mM_sensor_V" = 1.05 * sum(sensor.V)) )   ### prepare 5 % extra diluted sensor
 index.table
 write.table(index.table, file = paste0(outdir, "index_table_temp.txt"), quote = F, row.names = F, sep = "\t")
 

@@ -139,7 +139,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "f0_c", min = -0.3 * conc, max = 0.3 * conc, value = c(min_product_f0, max_product_f0))
     updateSliderInput(session, "f_plat_c", min = round(0.75 * max_product, 3), max = round(1.5 * conc, 3), value = c(round(0.75 * max_product, 3), round(1.25 * max_product, 3)))
     updateSliderInput(session, "k_c", min = -7, max = 1, value = c(-4, -2), step = 0.1)
-    updateSliderInput(session, "percent_fit", min = 0.01, max = 0.4, value = 0.1, step = 0.01)
+    updateSliderInput(session, "percent_fit", min = 0.01, max = 1, value = 0.1, step = 0.01)
   })
   
   fit_curve <- reactive({

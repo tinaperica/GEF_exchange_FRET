@@ -1,0 +1,5 @@
+Integrated Michaelis Menten(null)Index(null)Initial Conversion Factor (Signal units/unit [S])(null)Final Conversion Factor (Signal units/unit [S])(null)Initial [Substrate](null)kintr (s-1)(null)Baseline Slope (Signal units/s)(null)Evaporation Rate (% Volume Decrease/s)(null)Baseline Amplitdue (Signal units)(null)Baseline Rate Constant (s-1)(null)Time Offest (s)(null)kcat (s-1)(null)Km ([])(null)Total [Enzyme]
+data(null)index(null)ICF(null)FCF(null)[S](null)kintr(null)basS(null)EvapC(null)basA(null)basR(null)toff(null)kcat(null)Km(null)[E]
+Data332: 20190215-PE31_T34S-C10-8-1-20(null)0(null)5439.77(null)19524.5(null)5.6(null)0(null)0.0361333(null)0(null)0(null)0(null)0(null)5.09335(null)0.45104(null)0.001
+Data333: 20190215-PE31_T34S-C9-8-1-20(null)1(null)5398.25(null)19519(null)5.6(null)0(null)0.00954787(null)0(null)0(null)0(null)0(null)4.69446(null)0.419625(null)0.001
+
