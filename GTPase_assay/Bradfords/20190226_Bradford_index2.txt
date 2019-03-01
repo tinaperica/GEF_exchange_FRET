@@ -1,0 +1,37 @@
+well	sample	conc
+A1	a	2000
+A2	b	1500
+A3	c	1000
+A4	d	750
+A5	e	500
+A6	f	250
+A7	g	125
+A8	g_half	62.5
+A9	h	25
+A10	i	0
+A11	sample1	
+A12	sample2	
+B1	a	2000
+B2	b	1500
+B3	c	1000
+B4	d	750
+B5	e	500
+B6	f	250
+B7	g	125
+B8	g_half	62.5
+B9	h	25
+B10	i	0
+B11	sample1	
+B12	sample2	
+C1	a	2000
+C2	b	1500
+C3	c	1000
+C4	d	750
+C5	e	500
+C6	f	250
+C7	g	125
+C8	g_half	62.5
+C9	h	25
+C10	i	0
+C11	sample1	
+C12	sample2	

@@ -1,0 +1,55 @@
+well	sample	conc
+A2	a	2000
+A3	b	1500
+A4	c	1000
+A5	d	750
+A6	i	0
+A7	buffer	0
+A8	PE5	
+A9	PE8	
+A10	PE9_half	
+B2	a	2000
+B3	b	1500
+B4	c	1000
+B5	d	750
+B6	i	0
+B7	buffer	0
+B8	PE5	
+B9	PE8	
+B10	PE9_half	
+C2	a	2000
+C3	b	1500
+C4	c	1000
+C5	d	750
+C6	i	0
+C7	buffer	0
+C8	PE5	
+C9	PE8	
+C10	PE9_half	
+D2	e	500
+D3	f	250
+D4	g	125
+D5	h	25
+D6	i	0
+D7	buffer	0
+D8	PE10	
+D9	PE11_half	
+D10	PE12	
+E2	e	500
+E3	f	250
+E4	g	125
+E5	h	25
+E6	i	0
+E7	buffer	0
+E8	PE10	
+E9	PE11_half	
+E10	PE12	
+F2	e	500
+F3	f	250
+F4	g	125
+F5	h	25
+F6	i	0
+F7	buffer	0
+F8	PE10	
+F9	PE11_half	
+F10	PE12	

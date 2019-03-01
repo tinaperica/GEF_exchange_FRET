@@ -1,0 +1,41 @@
+well	sample	conc
+D2	a	2000
+D3	b	1500
+D4	c	1000
+D5	d	750
+D6	e	500
+D7	f	250
+D8	g	125
+D9	h	25
+E2	a	2000
+E3	b	1500
+E4	c	1000
+E5	d	750
+E6	e	500
+E7	f	250
+E8	g	125
+E9	h	25
+F2	a	2000
+F3	b	1500
+F4	c	1000
+F5	d	750
+F6	e	500
+F7	f	250
+F8	g	125
+F9	h	25
+G2	PE14	
+G3	PE14	
+G4	PE14	
+G5	PE16	
+G6	PE16	
+G7	PE16	
+G8	PE18	
+G9	PE18	
+H2	PE18	
+H3	PE22	
+H4	PE22	
+H5	PE22	
+H6	buffer	0
+H7	buffer	0
+H8	buffer	0
+H9	buffer	0

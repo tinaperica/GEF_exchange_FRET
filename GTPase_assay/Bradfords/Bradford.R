@@ -22,8 +22,8 @@ read_and_gather <- function(file) {
   return(data_gathered)
 }
 
-file <- "GTPase_assay/Bradfords/20190220_Bradford.txt"
-index <- read_tsv("GTPase_assay/Bradfords/20190220_Bradford_index.txt")
+file <- "GTPase_assay/Bradfords/20190228_Bradford2.txt"
+index <- read_tsv("GTPase_assay/Bradfords/20190228_Bradford_index2.txt")
 calibration_index <- index %>% filter(!is.na(conc))
 data_index <- index %>% filter( is.na(conc) )
 
@@ -59,11 +59,11 @@ gap_data <- data_index %>%
   mutate("percent_error" = ug_ml_conc_error / conc_ug_ml * 100) %>% 
   mutate("conc_uM" = conc_ug_ml / 43.25, "um_error" = percent_error/100 * conc_uM)
 
-write_tsv(calibration, path = "GTPase_assay/Bradfords/20190214_Brad_cali.txt")
-write_tsv(gap_data, path = "GTPase_assay/Bradfords/20190214_Brad_data.txt")
+#write_tsv(calibration, path = "GTPase_assay/Bradfords/20190214_Brad_cali.txt")
+#write_tsv(gap_data, path = "GTPase_assay/Bradfords/20190214_Brad_data.txt")
 
 
-### enzyme 
+### Gsp1 
 calibration_high <- calibration %>% filter(sample %in% high_conc)
 linear_fit <- lm(conc ~ ratio_abs, data = calibration_high)
 cal_slope <- linear_fit$coefficients[2]
